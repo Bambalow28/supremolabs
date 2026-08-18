@@ -1,0 +1,11 @@
+default_platform(:web)
+
+platform :web do
+  desc "Build the Flutter web release and deploy to Firebase Hosting"
+  lane :deploy do
+    # firebase.json's hosting.predeploy already runs
+    # `flutter build web --release` before every deploy,
+    # so this is the single build + deploy step — no separate build lane.
+    sh("firebase", "deploy", "--only", "hosting", "--non-interactive")
+  end
+end
