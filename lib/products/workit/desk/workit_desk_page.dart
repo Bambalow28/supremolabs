@@ -14,7 +14,10 @@ import 'package:flutter/material.dart';
 
 import '../../../app/site_shell.dart';
 import '../wi_colors.dart';
+import 'workit_challenges_desk.dart';
 import 'workit_desk_service.dart';
+
+enum _DeskTab { referrals, challenges }
 
 class WorkItDeskPage extends StatefulWidget {
   const WorkItDeskPage({super.key});
@@ -25,6 +28,7 @@ class WorkItDeskPage extends StatefulWidget {
 
 class _WorkItDeskPageState extends State<WorkItDeskPage> {
   bool _unlocked = false;
+  _DeskTab _tab = _DeskTab.referrals;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +47,32 @@ class _WorkItDeskPageState extends State<WorkItDeskPage> {
                 96,
               ),
               child: _unlocked
-                  ? _Ledger(isWide: isWide)
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            _FilterChip(
+                              label: 'REFERRAL PAYOUTS',
+                              selected: _tab == _DeskTab.referrals,
+                              onTap: () =>
+                                  setState(() => _tab = _DeskTab.referrals),
+                            ),
+                            const SizedBox(width: 8),
+                            _FilterChip(
+                              label: 'CHALLENGES',
+                              selected: _tab == _DeskTab.challenges,
+                              onTap: () =>
+                                  setState(() => _tab = _DeskTab.challenges),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+                        _tab == _DeskTab.referrals
+                            ? _Ledger(isWide: isWide)
+                            : WorkItChallengesDesk(isWide: isWide),
+                      ],
+                    )
                   : _Gate(onUnlock: () => setState(() => _unlocked = true)),
             ),
           ),
