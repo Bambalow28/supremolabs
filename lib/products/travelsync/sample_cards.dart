@@ -1,0 +1,78 @@
+import 'travel_card.dart';
+
+/// Public sample covers live in the `card-covers/sample` Supabase bucket —
+/// the same assets the mobile splash carousel uses.
+const String _coverBase =
+    'https://dxhkbrhvwricskfcztgm.supabase.co/storage/v1/object/public/card-covers/sample';
+
+/// Demo trips shown in the hero card fan. Mirrors the mobile splash carousel.
+const List<TravelCard> sampleCards = [
+  TravelCard(
+    id: 'demo-kyoto',
+    city: 'Kyoto',
+    country: 'Japan',
+    year: '2023',
+    cardNumber: 1,
+    dateRange: 'Apr 5–12, 2023',
+    nights: 7,
+    citiesVisited: ['Kyoto', 'Osaka', 'Nara'],
+    personalNote: 'Cherry blossoms in Maruyama Park. Pure magic.',
+    originAirport: 'SFO',
+    destinationAirport: 'KIX',
+    cardImageUrl: '$_coverBase/kyoto.jpg',
+    theme: 'sunset',
+    photoUrls: [],
+    userId: 'sample',
+  ),
+  TravelCard(
+    id: 'demo-toronto',
+    city: 'Toronto',
+    country: 'Canada',
+    year: '2024',
+    cardNumber: 2,
+    dateRange: 'Oct 12–18, 2024',
+    nights: 6,
+    citiesVisited: ['Toronto', 'Niagara Falls'],
+    personalNote: 'Loved the CN Tower at night. Best poutine of my life.',
+    originAirport: 'JFK',
+    destinationAirport: 'YYZ',
+    cardImageUrl: '$_coverBase/toronto.jpg',
+    theme: 'ocean',
+    photoUrls: [],
+    userId: 'sample',
+  ),
+  TravelCard(
+    id: 'demo-paris',
+    city: 'Paris',
+    country: 'France',
+    year: '2024',
+    cardNumber: 3,
+    dateRange: 'Jun 3–10, 2024',
+    nights: 7,
+    citiesVisited: ['Paris', 'Versailles'],
+    personalNote: 'The Eiffel Tower at golden hour is unlike anything else.',
+    originAirport: 'JFK',
+    destinationAirport: 'CDG',
+    cardImageUrl: '$_coverBase/paris.jpg',
+    theme: 'night',
+    photoUrls: [],
+    userId: 'sample',
+  ),
+  TravelCard(
+    id: 'demo-rome',
+    city: 'Rome',
+    country: 'Italy',
+    year: '2024',
+    cardNumber: 4,
+    dateRange: 'Sep 8–15, 2024',
+    nights: 7,
+    citiesVisited: ['Rome', 'Vatican City'],
+    personalNote: 'Tossed a coin in the Trevi. The pasta ruined me forever.',
+    originAirport: 'YYZ',
+    destinationAirport: 'FCO',
+    cardImageUrl: '$_coverBase/rome.jpg',
+    theme: 'desert',
+    photoUrls: [],
+    userId: 'sample',
+  ),
+];

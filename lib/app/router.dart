@@ -1,0 +1,144 @@
+import 'package:flutter/material.dart';
+
+import '../about/about_page.dart';
+import '../data/products.dart';
+import '../home/home_page.dart';
+import '../products/diamo/diamo_page.dart';
+import '../products/notesync/notesync_page.dart';
+import '../products/plansync/desk/desk_page.dart';
+import '../products/plansync/plansync_page.dart';
+import '../products/stanverse/desk/stanverse_desk_page.dart';
+import '../products/stanverse/stanverse_page.dart';
+import '../products/travelsync/travelsync_page.dart';
+import '../products/wealthsync/wealthsync_page.dart';
+import '../products/workit/desk/workit_desk_page.dart';
+import '../products/workit/workit_legal_page.dart';
+import '../products/workit/workit_page.dart';
+import '../theme/sl_theme.dart';
+
+/// One entry per path under supremolabs.com. Unknown paths fall back home.
+/// Sub-routes under a product (e.g. `/travelsync/features`) are real
+/// stations on that product's own single scrolling page, not separate pages
+/// — see the `initialSection` comment on each product page.
+final _pages = <String, WidgetBuilder>{
+  '/': (_) => const HomePage(),
+  '/about': (_) => const AboutPage(),
+  '/travelsync': (_) => TravelSyncPage(),
+  '/travelsync/features': (_) => TravelSyncPage(initialSection: 'features'),
+  '/travelsync/download': (_) => TravelSyncPage(initialSection: 'download'),
+  '/wealthsync': (_) => WealthSyncPage(),
+  '/wealthsync/features': (_) => WealthSyncPage(initialSection: 'features'),
+  '/wealthsync/tracker': (_) => WealthSyncPage(initialSection: 'tracker'),
+  '/plansync': (_) => const PlanSyncPage(),
+  '/plansync/itinerary': (_) => const PlanSyncPage(initialSection: 'itinerary'),
+  '/plansync/places': (_) => const PlanSyncPage(initialSection: 'places'),
+  // Private back office — deliberately not linked from any public page.
+  '/plansync/desk': (_) => const PlanSyncDeskPage(),
+  '/notesync': (_) => NoteSyncPage(),
+  '/notesync/folders': (_) => NoteSyncPage(initialSection: 'folders'),
+  '/notesync/device': (_) => NoteSyncPage(initialSection: 'device'),
+  '/workit': (_) => WorkItPage(),
+  '/workit/features': (_) => WorkItPage(initialSection: 'features'),
+  '/workit/screens': (_) => WorkItPage(initialSection: 'screens'),
+  // Old name for the screens rail — kept so an existing link never 404s.
+  '/workit/progress': (_) => WorkItPage(initialSection: 'progress'),
+  '/workit/privacy': (_) => const WorkItPrivacyPage(),
+  '/workit/terms': (_) => const WorkItTermsPage(),
+  // Private back office — deliberately not linked from any public page.
+  '/workit/desk': (_) => const WorkItDeskPage(),
+  '/diamo': (_) => DiaMoPage(),
+  '/diamo/diary': (_) => DiaMoPage(initialSection: 'diary'),
+  '/diamo/discover': (_) => DiaMoPage(initialSection: 'discover'),
+  '/stanverse': (_) => StanversePage(),
+  '/stanverse/community': (_) => StanversePage(initialSection: 'community'),
+  '/stanverse/marketplace': (_) => StanversePage(initialSection: 'marketplace'),
+  // Private back office — deliberately not linked from any public page.
+  '/stanverse/desk': (_) => const StanverseDeskPage(),
+};
+
+Route<dynamic> generateRoute(RouteSettings settings) {
+  final name = settings.name ?? '/';
+  final builder = _pages[name] ?? _pages['/']!;
+  return _LineSweep(
+    builder: builder,
+    settings: settings.name == null ? const RouteSettings(name: '/') : settings,
+    // The destination's own line color rides across the screen, so arriving
+    // somewhere reads as travelling down that line rather than a page swap.
+    line: productForPath(name)?.accent ?? SLColors.accent,
+  );
+}
+
+/// Replaces the default page cut with a wipe in the destination's line color:
+/// the band sweeps in over the page you are leaving, then off the far side to
+/// reveal the one you asked for.
+class _LineSweep extends PageRouteBuilder<dynamic> {
+  final Color line;
+
+  _LineSweep({
+    required WidgetBuilder builder,
+    required super.settings,
+    required this.line,
+  }) : super(
+         pageBuilder: (context, _, _) => builder(context),
+         transitionDuration: const Duration(milliseconds: 620),
+         reverseTransitionDuration: const Duration(milliseconds: 520),
+         transitionsBuilder: (context, animation, _, child) {
+           // A viewer who asked the OS to stop animation gets the page.
+           if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+             return child;
+           }
+           return Stack(
+             children: [
+               // The arriving page appears behind the band, once the band
+               // has covered the screen.
+               FadeTransition(
+                 opacity: CurvedAnimation(
+                   parent: animation,
+                   curve: const Interval(0.5, 0.72),
+                 ),
+                 child: child,
+               ),
+               IgnorePointer(
+                 child: AnimatedBuilder(
+                   animation: animation,
+                   builder: (context, _) => CustomPaint(
+                     size: Size.infinite,
+                     painter: _SweepPainter(color: line, t: animation.value),
+                   ),
+                 ),
+               ),
+             ],
+           );
+         },
+       );
+}
+
+class _SweepPainter extends CustomPainter {
+  final Color color;
+  final double t;
+  _SweepPainter({required this.color, required this.t});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (t <= 0 || t >= 1) return;
+    final e = Curves.easeInOutCubic.transform(t);
+    // First half the band covers from the left; second half its trailing
+    // edge leaves the same way, uncovering the new page.
+    final left = e < 0.5 ? 0.0 : size.width * (e - 0.5) * 2;
+    final right = e < 0.5 ? size.width * e * 2 : size.width;
+    canvas.drawRect(
+      Rect.fromLTRB(left, 0, right, size.height),
+      Paint()..color = color,
+    );
+    // A brighter leading rule, so the band reads as a line travelling rather
+    // than a rectangle growing.
+    final edge = e < 0.5 ? right : left;
+    canvas.drawRect(
+      Rect.fromLTRB(edge - 2, 0, edge + 2, size.height),
+      Paint()..color = SLColors.ink.withValues(alpha: 0.85),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SweepPainter old) => old.t != t || old.color != color;
+}

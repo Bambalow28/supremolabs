@@ -1,0 +1,428 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-15T16:02:42.905000+00:00",
+  "title": "Design System: Supremo Labs",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Graphite Board",
+        "canonical": "oklch(15.8% 0.007 258.4)",
+        "tonalRamp": [
+          "#0A0B0D",
+          "#232529",
+          "#404246",
+          "#5F6165",
+          "#808287",
+          "#A2A5AA",
+          "#C6C9CE",
+          "#EDEFF1"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Blank Sleeve",
+        "canonical": "oklch(19.9% 0.011 260.7)",
+        "tonalRamp": [
+          "#0A0B0E",
+          "#22252B",
+          "#3F4248",
+          "#5E6168",
+          "#7F8389",
+          "#A1A5AC",
+          "#C5C9D1",
+          "#ECEFF3"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Keyline",
+        "canonical": "oklch(28.8% 0.016 259.8)",
+        "tonalRamp": [
+          "#090B0F",
+          "#20252D",
+          "#3D424B",
+          "#5C626B",
+          "#7D838C",
+          "#9FA5B0",
+          "#C3CAD4",
+          "#EBEFF5"
+        ]
+      },
+      "divider": {
+        "role": "neutral",
+        "displayName": "Row Rule",
+        "canonical": "oklch(24.2% 0.013 258.4)",
+        "tonalRamp": [
+          "#090B0E",
+          "#21252B",
+          "#3E4249",
+          "#5D6269",
+          "#7E838A",
+          "#A0A5AD",
+          "#C4CAD2",
+          "#EBEFF4"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Cool White Ink",
+        "canonical": "oklch(96.6% 0.005 258.3)",
+        "tonalRamp": [
+          "#0A0B0C",
+          "#242527",
+          "#404244",
+          "#606164",
+          "#818285",
+          "#A3A5A8",
+          "#C7C9CC",
+          "#EDEEF0"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Muted Credit Ink",
+        "canonical": "oklch(66.1% 0.023 261.7)",
+        "tonalRamp": [
+          "#080B11",
+          "#1F2530",
+          "#3B424E",
+          "#5A626F",
+          "#7B8390",
+          "#9DA5B4",
+          "#C1CAD8",
+          "#E9EFF8"
+        ]
+      },
+      "studio-signal": {
+        "role": "primary",
+        "displayName": "Studio Amber",
+        "canonical": "oklch(81.3% 0.165 75.0)",
+        "tonalRamp": [
+          "#200000",
+          "#4E0200",
+          "#712A00",
+          "#954D00",
+          "#BA6F00",
+          "#E09300",
+          "#FFB72D",
+          "#FFE6A3"
+        ]
+      },
+      "studio-signal-hover": {
+        "role": "primary",
+        "displayName": "Studio Amber Lit",
+        "canonical": "oklch(84.5% 0.147 79.2)",
+        "tonalRamp": [
+          "#1D0200",
+          "#481000",
+          "#693200",
+          "#8C5300",
+          "#B07500",
+          "#D59811",
+          "#FCBD49",
+          "#FFE8AB"
+        ]
+      },
+      "sleeve-ink-light": {
+        "role": "neutral",
+        "displayName": "Sleeve Print White",
+        "canonical": "oklch(97.6% 0.003 106.4)",
+        "tonalRamp": [
+          "#0B0B0A",
+          "#252524",
+          "#424240",
+          "#616160",
+          "#828281",
+          "#A5A5A3",
+          "#C9C9C7",
+          "#EEEEED"
+        ]
+      },
+      "travelsync": {
+        "role": "tertiary",
+        "displayName": "TravelSync Blue",
+        "canonical": "oklch(60.8% 0.203 266.7)",
+        "tonalRamp": [
+          "#03003D",
+          "#0B0085",
+          "#1529AB",
+          "#2D51D2",
+          "#4B76FA",
+          "#6B9BFF",
+          "#8DC1FF",
+          "#C9EDFF"
+        ]
+      },
+      "wealthsync": {
+        "role": "tertiary",
+        "displayName": "WealthSync Slate",
+        "canonical": "oklch(47.7% 0.076 263.5)",
+        "tonalRamp": [
+          "#030A1E",
+          "#11234A",
+          "#2C416B",
+          "#4A618D",
+          "#6A82B1",
+          "#8CA5D6",
+          "#B0CAFC",
+          "#DFEFFF"
+        ]
+      },
+      "plansync": {
+        "role": "tertiary",
+        "displayName": "PlanSync Teal",
+        "canonical": "oklch(78.5% 0.133 181.9)",
+        "tonalRamp": [
+          "#00140E",
+          "#00362A",
+          "#005647",
+          "#007867",
+          "#009B88",
+          "#00BFAB",
+          "#47E5CF",
+          "#B2FFF2"
+        ]
+      },
+      "notesync": {
+        "role": "tertiary",
+        "displayName": "NoteSync Green",
+        "canonical": "oklch(67.4% 0.158 145.2)",
+        "tonalRamp": [
+          "#001300",
+          "#003500",
+          "#005500",
+          "#00771B",
+          "#359A41",
+          "#5CBE64",
+          "#81E487",
+          "#C7FFC8"
+        ]
+      },
+      "workit": {
+        "role": "tertiary",
+        "displayName": "WorkIt Tint",
+        "canonical": "oklch(69.1% 0.166 254.4)",
+        "tonalRamp": [
+          "#000433",
+          "#001672",
+          "#003C96",
+          "#005FBC",
+          "#2E82E2",
+          "#54A7FF",
+          "#79CCFF",
+          "#C1F3FF"
+        ]
+      },
+      "diamo": {
+        "role": "tertiary",
+        "displayName": "Diamo Plum",
+        "canonical": "oklch(42.1% 0.104 5.6)",
+        "tonalRamp": [
+          "#1E0008",
+          "#4A021E",
+          "#6D253A",
+          "#914559",
+          "#B66779",
+          "#DC899C",
+          "#FFADBF",
+          "#FFDEE8"
+        ]
+      },
+      "stanverse": {
+        "role": "tertiary",
+        "displayName": "Stanverse Paper",
+        "canonical": "oklch(96.2% 0.009 84.6)",
+        "tonalRamp": [
+          "#0C0B09",
+          "#272520",
+          "#44423D",
+          "#63615C",
+          "#85827D",
+          "#A7A59F",
+          "#CCC9C3",
+          "#F0EEEB"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "masthead": {
+        "displayName": "Masthead",
+        "purpose": "SUPREMO LABS only; fitted edge to edge across the measure."
+      },
+      "display": {
+        "displayName": "Section Heading",
+        "purpose": "Discography, Liner notes."
+      },
+      "headline": {
+        "displayName": "Pulled Release Name",
+        "purpose": "The face-out release's name in the notes under the shelf."
+      },
+      "title": {
+        "displayName": "Track Name",
+        "purpose": "Release names in the discography."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Taglines, the label statement count, liner note copy (22/19px in ink)."
+      },
+      "label": {
+        "displayName": "Credit Label",
+        "purpose": "Catalog numbers, genre credits, OUT NOW / FORTHCOMING, button text; tabular figures."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "crate-dig",
+        "value": "460ms cubic-bezier(0.165, 0.84, 0.44, 1)",
+        "purpose": "Spine widens into sleeve, previous sleeve closes; shelf scroll on narrow; spine 12px hover lift."
+      },
+      {
+        "name": "screen-rise",
+        "value": "320ms cubic-bezier(0.165, 0.84, 0.44, 1)",
+        "purpose": "Real screen rises from 31% to 26% of the sleeve on hover."
+      },
+      {
+        "name": "notes-swap",
+        "value": "280ms",
+        "purpose": "Cross-fade of the notes under the shelf."
+      },
+      {
+        "name": "hover",
+        "value": "180ms ease-out",
+        "purpose": "Open action fill, discography row warm and arrow slide."
+      },
+      {
+        "name": "entrance",
+        "value": "620ms cubic-bezier(0.215, 0.61, 0.355, 1)",
+        "purpose": "FadeSlideIn when a section's top crosses 88% of the viewport."
+      },
+      {
+        "name": "line-sweep",
+        "value": "620ms out / 520ms back, easeInOutCubic",
+        "purpose": "Route transition wipe in the destination's color."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "shelf-narrow",
+        "value": "700px (content width)"
+      },
+      {
+        "name": "page-narrow",
+        "value": "760px (viewport width)"
+      },
+      {
+        "name": "measure",
+        "value": "1120px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Open Action (outlined)",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "The one action shape: outlined in lineInk(accent) or studio amber, fills on hover with contrasting ink.",
+      "html": "<button class=\"ds-open\">OPEN TRAVELSYNC <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></button>",
+      "css": ".ds-open{display:inline-flex;align-items:center;gap:12px;background:transparent;color:#FFB020;border:1.5px solid #FFB020;border-radius:0;padding:15px 22px;font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:2.2px;font-variant-numeric:tabular-nums;text-transform:uppercase;cursor:pointer;transition:background .18s ease-out,color .18s ease-out}.ds-open:hover,.ds-open:focus-visible{background:#FFB020;color:#0B0D10;outline:none}"
+    },
+    {
+      "name": "Spine",
+      "kind": "custom",
+      "refersTo": "spine-forthcoming",
+      "description": "A release standing in the crate: flooded when out, keyline when forthcoming; lifts 12px on hover.",
+      "html": "<div class=\"ds-shelf\"><div class=\"ds-spine ds-spine-live\"><span class=\"ds-spine-name\">PLANSYNC</span><span class=\"ds-spine-no\">SL 003</span></div><div class=\"ds-spine ds-spine-fc\"><span class=\"ds-spine-name\">JARVIS</span><span class=\"ds-spine-no\">SL 008</span></div></div>",
+      "css": ".ds-shelf{display:flex;gap:2px;align-items:flex-end;height:300px;padding-top:12px;background:#0B0D10}.ds-spine{width:48px;height:288px;box-sizing:border-box;padding:18px 0;display:flex;align-items:center;gap:12px;writing-mode:vertical-rl;transition:transform .46s cubic-bezier(.165,.84,.44,1),border-color .46s}.ds-spine:hover{transform:translateY(-12px)}.ds-spine-live{background:#2DD4BF;color:#0B0D10}.ds-spine-fc{background:#13161B;color:#8B93A1;border:1px solid #262B33}.ds-spine-fc:hover{border-color:#8B93A1}.ds-spine-name{font-family:'Big Shoulders Display',sans-serif;line-height:1;font-size:25px;font-weight:700;letter-spacing:.6px}.ds-spine-no{font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:2.2px;font-variant-numeric:tabular-nums;text-transform:uppercase;}"
+    },
+    {
+      "name": "Sleeve, out now (typographic)",
+      "kind": "card",
+      "description": "Face-out square sleeve flooded in the release accent; name set huge when no real screen exists.",
+      "html": "<div class=\"ds-sleeve\" style=\"background:#465C88;color:#F7F7F5\"><div class=\"ds-sleeve-credit\"><span>SL 002</span><span>MONEY</span></div><div class=\"ds-sleeve-name\">WEALTHSYNC</div><div class=\"ds-sleeve-ghost\">WEALTHSYNC</div></div>",
+      "css": ".ds-sleeve{position:relative;width:320px;height:320px;overflow:hidden;border-radius:0}.ds-sleeve-credit{position:absolute;top:18px;left:18px;right:18px;display:flex;justify-content:space-between;font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:2.2px;font-variant-numeric:tabular-nums;text-transform:uppercase;}.ds-sleeve-name{position:absolute;top:40px;left:18px;font-family:'Big Shoulders Display',sans-serif;line-height:1;font-size:42px;font-weight:800;line-height:.9}.ds-sleeve-ghost{position:absolute;left:-6px;bottom:-32px;white-space:nowrap;font-family:'Big Shoulders Display',sans-serif;line-height:1;font-size:147px;font-weight:900;color:rgba(247,247,245,.16)}"
+    },
+    {
+      "name": "Sleeve, forthcoming",
+      "kind": "card",
+      "refersTo": "sleeve-forthcoming",
+      "description": "Blank keyline sleeve with a tilted FORTHCOMING stamp.",
+      "html": "<div class=\"ds-sleeve-fc\"><div class=\"ds-fc-credit\"><span>SL 006</span><span>MONEY</span></div><div class=\"ds-fc-name\">JUWA WEALTH</div><div class=\"ds-stamp\">FORTHCOMING</div></div>",
+      "css": ".ds-sleeve-fc{position:relative;width:320px;height:320px;background:#13161B;border:1px solid #262B33;color:#8B93A1;display:flex;align-items:center;justify-content:center}.ds-fc-credit{position:absolute;top:18px;left:18px;right:18px;display:flex;justify-content:space-between;font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:2.2px;font-variant-numeric:tabular-nums;text-transform:uppercase;}.ds-fc-name{position:absolute;top:40px;left:18px;font-family:'Big Shoulders Display',sans-serif;line-height:1;font-size:42px;font-weight:800;line-height:.9;color:#8B93A1}.ds-stamp{transform:rotate(-8deg);border:2px solid #8B93A1;padding:4px 13px;font-family:'Big Shoulders Display',sans-serif;line-height:1;font-size:32px;font-weight:800;letter-spacing:2px}"
+    },
+    {
+      "name": "Discography Row",
+      "kind": "custom",
+      "refersTo": "discography-row",
+      "description": "Catalog number, status swatch, name and tagline, genre, status; warms in lineInk on hover.",
+      "html": "<div class=\"ds-track\"><span class=\"ds-no\">SL 004</span><span class=\"ds-sw\" style=\"background:#4CAF55\"></span><span class=\"ds-tt\"><span class=\"ds-tn\">NoteSync</span><span class=\"ds-tl\">Notes that stay yours.</span></span><span class=\"ds-genre\">Everyday</span><span class=\"ds-status\">OUT NOW &rarr;</span></div><div class=\"ds-track ds-track-fc\"><span class=\"ds-no\">SL 007</span><span class=\"ds-sw ds-sw-fc\"></span><span class=\"ds-tt\"><span class=\"ds-tn\">HoopSync</span><span class=\"ds-tl\">Built for the game.</span></span><span class=\"ds-genre\">Body</span><span class=\"ds-status\">FORTHCOMING</span></div>",
+      "css": ".ds-track{display:flex;align-items:center;padding:20px 12px;border-bottom:1px solid #1C2026;background:#0B0D10;transition:background .18s ease-out;cursor:pointer}.ds-track:hover{background:rgba(76,175,85,.08)}.ds-no{width:96px;font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:2.2px;font-variant-numeric:tabular-nums;text-transform:uppercase;color:#8B93A1}.ds-sw{width:14px;height:14px;margin-right:18px}.ds-sw-fc{box-sizing:border-box;border:1.4px solid #8B93A1}.ds-tt{flex:1;display:flex;flex-direction:column;gap:2px}.ds-tn{font-family:'Big Shoulders Display',sans-serif;line-height:1;font-size:30px;font-weight:700;color:#F2F4F7;transition:color .18s}.ds-track:hover .ds-tn{color:#4CAF55}.ds-tl,.ds-genre{font-family:'Hanken Grotesk',sans-serif;font-size:15px;color:#8B93A1}.ds-genre{width:150px}.ds-status{min-width:132px;font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:2.2px;font-variant-numeric:tabular-nums;text-transform:uppercase;color:#4CAF55}.ds-track-fc{cursor:default}.ds-track-fc:hover{background:#0B0D10}.ds-track-fc .ds-tn{color:#8B93A1}.ds-track-fc .ds-status{color:#8B93A1}"
+    },
+    {
+      "name": "Nav",
+      "kind": "nav",
+      "description": "Transparent nav: SUPREMO LABS wordmark as signage, breadcrumb in the route color, ABOUT on the hub only.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-wm\">SUPREMO LABS</a><a class=\"ds-about\">ABOUT</a></nav>",
+      "css": ".ds-nav{display:flex;justify-content:space-between;padding:28px 24px;border-bottom:1px solid #FFB020;background:transparent}.ds-wm,.ds-about{font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:2.2px;cursor:pointer;transition:color .16s}.ds-wm{color:#F2F4F7}.ds-wm:hover{color:#FFB020}.ds-about{color:#8B93A1}.ds-about:hover,.ds-about:focus-visible{color:#F2F4F7}"
+    },
+    {
+      "name": "Portrait Placeholder",
+      "kind": "custom",
+      "description": "Labeled keyline slot standing in for a founder photo until one is supplied.",
+      "html": "<div class=\"ds-portrait\">PORTRAIT<br>TO BE SUPPLIED</div>",
+      "css": ".ds-portrait{width:240px;height:240px;display:flex;align-items:center;justify-content:center;text-align:center;border:1px solid #262B33;font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:2.2px;font-variant-numeric:tabular-nums;text-transform:uppercase;color:#8B93A1;background:#0B0D10}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Record Label Catalog",
+    "overview": "a record label's catalog. Supremo Labs is the label, every app is a numbered release, and the hub is the catalog laid on a matte near-black board. Replaces the living-web world (and the night-operations map and old-money briefs before it) entirely; a retired look is evidence of what this site was, never authority over what it is now.  the whole catalog stands in one crate. Every release is a spine in catalog order; one is always pulled face-out as a square sleeve. A visitor digs the crate, pulls a sleeve, and opens that release. Coherence is shown by eleven releases sharing one shelf, one numbering, and one sleeve format, not claimed in copy.",
+    "keyCharacteristics": [
+      "Every app is a numbered release, SL 001 to SL 011, derived from products.dart order.",
+      "One crate of spines with one square sleeve pulled face-out in the release's own color.",
+      "Real app screens rise from the sleeve's bottom edge; screenless releases are set in type.",
+      "Solid means out now; keyline means forthcoming.",
+      "Big Shoulders Display over Hanken Grotesk with tabular credit labels.",
+      "Flat, square-cornered, graphite board; nothing moves unprompted."
+    ],
+    "rules": [
+      {
+        "name": "The Catalog Number Rule",
+        "body": "`SL` plus a three-digit index is the only numbering on the site, always derived from list order and set in tabular figures. Never type a catalog number, never renumber by reordering for taste.",
+        "section": "colors"
+      },
+      {
+        "name": "The Real Screen or Type Rule",
+        "body": "A sleeve shows a real shipped app screen (`Product.screen`, today TravelSync, WealthSync, WorkIt) or it sets the release's name typographically. Never a mock, stand-in, or generated screen.",
+        "section": "colors"
+      },
+      {
+        "name": "The Keyline Means Forthcoming Rule",
+        "body": "Out now is solid; forthcoming is a keyline. The spine, the sleeve, and the discography swatch all speak this one language, so status reads before any text does.",
+        "section": "colors"
+      },
+      {
+        "name": "The lineInk Rule",
+        "body": "`lineInk()` (`lib/theme/sl_theme.dart`) is mandatory wherever an accent becomes type or a line on the graphite ground: the notes' Open action, the discography's hover name and OUT NOW state, the chrome. WealthSync's slate and Diamo's plum sit at luminance .11 and .07 and fail 4.5:1 as type on the ground; `lineInk()` lifts any accent below .20 until it clears. The raw accent is used only as a flood (sleeve, spine, the 14px discography swatch), where it is the release's own surface, not type.",
+        "section": "colors"
+      },
+      {
+        "name": "The Legible Sleeve Rule",
+        "body": "Ink printed on a flooded sleeve or a filled button is whichever of ground `#0B0D10` or `#F7F7F5` clears 4.5:1 against that flood, since the catalog number and genre on a sleeve are 12px labels. Choose by contrast, not by a luminance guess.",
+        "section": "colors"
+      },
+      {
+        "name": "The Fitted Masthead Rule",
+        "body": "The label name is sized by the measure, not by a number: it fills the column edge to edge at every width and is the page's one header in the accessibility tree.",
+        "section": "typography"
+      },
+      {
+        "name": "The Signage Rule",
+        "body": "Labels are printed on an object: a spine, a sleeve's corners, a row's state, a button, the nav wordmark. Section headings carry their own weight and never get a kicker above them.",
+        "section": "typography"
+      }
+    ],
+    "dos": [],
+    "donts": []
+  }
+}

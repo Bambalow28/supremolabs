@@ -25,6 +25,10 @@ verified, cert provisioning).
 
 ## Design
 
-Dark mode, premium, old-money aesthetic — deep neutrals, muted metallics,
-serif display type, restrained motion. Shaped via `/impeccable`; see
-`DESIGN.md` once impeccable's `init`/`new-work` pass has run.
+Dark, record-label world — the home page is Supremo Labs' catalog: every app is
+a numbered release (SL 001–SL 011), shown as spines in a crate with one sleeve
+pulled face-out in the product's own color (real app screen where one exists,
+typographic otherwise; forthcoming releases are blank keyline sleeves), then a
+discography list and liner notes. Big Shoulders Display + Hanken Grotesk.
+Retired the living-web (mesh) hero in full. Shaped via `/impeccable`; see
+`DESIGN.md`.
