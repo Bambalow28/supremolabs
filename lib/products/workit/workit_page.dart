@@ -21,6 +21,7 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/motion.dart';
@@ -1056,7 +1057,7 @@ class _LegalLink extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => Navigator.of(context).pushNamed(route),
+        onTap: () => context.push(route),
         child: Text(
           label,
           style: wiText(

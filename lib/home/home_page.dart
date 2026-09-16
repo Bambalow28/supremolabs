@@ -3,6 +3,7 @@
 // pulled face-out. Direction lives in the home surface brief under
 // .impeccable/surfaces, not here.
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../app/motion.dart';
 import '../app/site_shell.dart';
@@ -26,7 +27,7 @@ const _dig = Duration(milliseconds: 460);
 const _digCurve = Curves.easeOutQuart;
 
 void _open(BuildContext context, Product p) {
-  if (p.live) Navigator.of(context).pushNamed(p.route!);
+  if (p.live) context.push(p.route!);
 }
 
 class HomePage extends StatelessWidget {
@@ -236,25 +237,28 @@ class _ShelfItem extends StatelessWidget {
           : 'Show ${catalogNo(product)}, ${product.name}',
       child: Hover(
         onTap: onTap,
-        builder: (context, hovered) => AnimatedContainer(
-          duration: duration,
-          curve: _digCurve,
-          width: open ? sleeve : spine,
-          height: sleeve,
-          // A spine lifts a finger's width out of the crate under the cursor.
-          transform: Matrix4.translationValues(
-            0,
-            hovered && !open ? -12 : 0,
-            0,
-          ),
-          child: ClipRect(
-            child: OverflowBox(
-              alignment: Alignment.centerLeft,
-              minWidth: open ? sleeve : spine,
-              maxWidth: open ? sleeve : spine,
-              child: open
-                  ? _Sleeve(product: product, size: sleeve, lifted: hovered)
-                  : _Spine(product: product, width: spine, lit: hovered),
+        // The lift runs on its own quick timer, separate from the slower
+        // dig that opens/closes the sleeve — a spine should feel responsive
+        // to the cursor moving between items, not follow the same 460ms
+        // the crate takes to dig one open.
+        builder: (context, hovered) => AnimatedSlide(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          offset: hovered && !open ? Offset(0, -12 / sleeve) : Offset.zero,
+          child: AnimatedContainer(
+            duration: duration,
+            curve: _digCurve,
+            width: open ? sleeve : spine,
+            height: sleeve,
+            child: ClipRect(
+              child: OverflowBox(
+                alignment: Alignment.centerLeft,
+                minWidth: open ? sleeve : spine,
+                maxWidth: open ? sleeve : spine,
+                child: open
+                    ? _Sleeve(product: product, size: sleeve, lifted: hovered)
+                    : _Spine(product: product, width: spine, lit: hovered),
+              ),
             ),
           ),
         ),
@@ -346,9 +350,28 @@ class _Sleeve extends StatelessWidget {
               top: s * (lifted ? 0.26 : 0.31),
               right: s * 0.08,
               width: s * 0.42,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(s * 0.035),
-                child: Image.asset(screen, fit: BoxFit.fitWidth),
+              // Same device-frame treatment as the product page's own screen
+              // rail — a rounded card with a hairline and a drop shadow,
+              // rather than a bare rectangle of pixels.
+              child: Container(
+                padding: EdgeInsets.all(s * 0.008),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(s * 0.045),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.16),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      blurRadius: s * 0.045,
+                      offset: Offset(0, s * 0.02),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(s * 0.035),
+                  child: Image.asset(screen, fit: BoxFit.fitWidth),
+                ),
               ),
             )
           else if (live)
@@ -652,17 +675,15 @@ class _LinerNotes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 760;
-    // Labeled placeholder until a real portrait is supplied (PRODUCT.md:
-    // no fabricated imagery).
     final portrait = Container(
       width: narrow ? 160 : 240,
       height: narrow ? 160 : 240,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(border: Border.all(color: SLColors.hairline)),
-      child: Text(
-        'PORTRAIT\nTO BE SUPPLIED',
-        textAlign: TextAlign.center,
-        style: SLType.label(SLColors.inkMuted),
+      decoration: BoxDecoration(
+        border: Border.all(color: SLColors.hairline),
+        image: const DecorationImage(
+          image: AssetImage('assets/about/portrait.png'),
+          fit: BoxFit.cover,
+        ),
       ),
     );
     final note = Column(
@@ -686,7 +707,7 @@ class _LinerNotes extends StatelessWidget {
         _Action(
           label: 'Read the full note',
           color: SLColors.accent,
-          onTap: () => Navigator.of(context).pushNamed('/about'),
+          onTap: () => context.push('/about'),
         ),
       ],
     );

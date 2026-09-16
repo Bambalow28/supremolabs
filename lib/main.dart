@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/router.dart';
 import 'products/plansync/desk/plansync_firebase_options.dart';
 import 'products/workit/desk/workit_firebase_options.dart';
@@ -26,7 +28,25 @@ void main() async {
   // Named app so the /workit/desk page can read WorkIt's own Firebase
   // project (workit-supremolabs) — the referral payout ledger.
   await Firebase.initializeApp(name: 'workit', options: workItFirebaseOptions);
+  // Read-only: the /travelsync in-page search reads travelsync's own public
+  // tables (travel_cards, profiles) with its own anon key — same project
+  // travelsync_website points at in prod.
+  await Supabase.initialize(
+    url: 'https://dxhkbrhvwricskfcztgm.supabase.co',
+    publishableKey: 'sb_publishable_CWZzJAkLcEVlJPuYu6cqBQ_k8bEdPOo',
+  );
   runApp(const SupremoLabsApp());
+}
+
+// Flutter's default web ScrollBehavior only lets touch/stylus drag a
+// scrollable — a mouse click-drag is ignored. Every horizontal rail on the
+// site (WorkIt's screens, the home crate) wants mouse drag too.
+class _AppScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    ...super.dragDevices,
+    PointerDeviceKind.mouse,
+  };
 }
 
 class SupremoLabsApp extends StatelessWidget {
@@ -34,13 +54,12 @@ class SupremoLabsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Supremo Labs',
       debugShowCheckedModeBanner: false,
       theme: slTheme(),
-      // No initialRoute — it would override the browser's path and send
-      // every deep link (supremolabs.com/plansync) back to the home page.
-      onGenerateRoute: generateRoute,
+      scrollBehavior: _AppScrollBehavior(),
+      routerConfig: appRouter,
     );
   }
 }

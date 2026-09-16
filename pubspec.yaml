@@ -43,6 +43,8 @@ dependencies:
   cloud_firestore: ^6.9.0
   firebase_storage: ^13.5.0
   image_picker: ^1.2.3
+  supabase_flutter: ^2.15.0
+  go_router: ^14.0.0
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +69,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/about/
     - assets/travelsync/
     - assets/wealthsync/
     - assets/workit/

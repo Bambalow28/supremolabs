@@ -13,10 +13,11 @@
 // separate pages, since the page is one continuous scroll.
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../app/motion.dart';
 import '../../app/site_shell.dart';
+import 'search/in_page_search.dart';
 import 'ts_colors.dart';
 import 'widgets/app_store_button.dart';
-import 'widgets/header_search_field.dart';
 import 'widgets/hero_card_fan.dart';
 import 'widgets/map_background.dart';
 import 'widgets/marketing.dart';
@@ -40,7 +41,6 @@ class TravelSyncPage extends StatelessWidget {
     }
     return SiteShell(
       ground: bgDark,
-      trailing: const HeaderSearchField(),
       children: [
         Stack(
           children: [
@@ -68,16 +68,16 @@ class TravelSyncPage extends StatelessWidget {
               painter: MapBackgroundPainter(),
               child: Column(
                 children: [
-                  _Hero(isWide: isWide),
+                  FadeSlideIn(child: _Hero(isWide: isWide)),
                   KeyedSubtree(
                     key: _featuresKey,
-                    child: FeaturesSection(isWide: isWide),
+                    child: FadeSlideIn(child: FeaturesSection(isWide: isWide)),
                   ),
-                  PassportSection(isWide: isWide),
-                  ThemeShowcase(isWide: isWide),
+                  FadeSlideIn(child: PassportSection(isWide: isWide)),
+                  FadeSlideIn(child: ThemeShowcase(isWide: isWide)),
                   KeyedSubtree(
                     key: _downloadKey,
-                    child: DownloadCta(isWide: isWide),
+                    child: FadeSlideIn(child: DownloadCta(isWide: isWide)),
                   ),
                   const SizedBox(height: 48),
                 ],
@@ -142,6 +142,8 @@ class _Hero extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 28),
+          const Center(child: InPageSearch()),
           const SizedBox(height: 32),
           const AppStoreButton(large: true),
         ],

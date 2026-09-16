@@ -3,10 +3,10 @@
 // gradient "Notes" wordmark are the same components and tokens the real app
 // ships (see notesync/lib/theme/app_theme.dart and UI/home/widgets/), so a
 // visitor who later opens the app recognizes it immediately.
-// OWN-WORLD: NoteSync's own navy (#0B0F1A), surface #131A2E, elevated
-// #1A2440, one green accent #4CAF55 — mirrored 1:1 from AppColors.dark, not
-// approximated. Helvetica throughout, matching the app's one-family type
-// system.
+// OWN-WORLD: NoteSync's own true black (#000000), surface #1C1C1E, elevated
+// #2C2C2E, one iOS-blue accent #0A84FF — mirrored 1:1 from AppColors.dark,
+// not approximated. No custom font family; the system face (SF Pro on iOS)
+// carries the UI, matching the app's own theme.
 // STORY: the visitor recognizes the app's real UI (not an abstraction of
 // it), understands what NoteSync actually looks like day to day, and ticks
 // the line that asks for a build.
@@ -16,6 +16,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../app/motion.dart';
 import '../../app/site_shell.dart';
 import 'ns_colors.dart';
 
@@ -27,15 +28,15 @@ final _betaMailto = Uri(
   queryParameters: const {'subject': 'NoteSync TestFlight access'},
 );
 
-// Mirrors the sample folder set the app itself would show — five different
-// colors (the user's own choice in the app), not five shades of the brand
-// green.
+// Mirrors the app's own default folder color choices (notes_home_screen.dart
+// `_defaultFolderColorChoices`) — the user's own pick per folder, not five
+// shades of one accent.
 const _folders = <(String, int, Color)>[
   ('Home', 24, Color(0xFF4CAF55)),
-  ('Recipes', 61, Color(0xFFE0A33E)),
-  ('Book', 12, Color(0xFF4B9BFA)),
-  ('Music', 38, Color(0xFFA87BE8)),
-  ('Work', 107, Color(0xFFE8614A)),
+  ('Recipes', 61, Color(0xFFE0A030)),
+  ('Book', 12, Color(0xFF4B76FA)),
+  ('Music', 38, Color(0xFF8B5CF6)),
+  ('Work', 107, Color(0xFFE0637A)),
 ];
 
 Color _folderColor(String name) => _folders.firstWhere((f) => f.$1 == name).$3;
@@ -76,66 +77,68 @@ class NoteSyncPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _Hero(isWide: isWide),
+                  FadeSlideIn(child: _Hero(isWide: isWide)),
                   const SizedBox(height: 48),
                   // Paired side by side on wide screens — related sections
                   // fill the width instead of stacking under one narrow
                   // column with a wide empty gutter either side.
-                  if (isWide)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: _NoteList(isWide: isWide)),
-                        const SizedBox(width: 40),
-                        Expanded(child: _Week(isWide: isWide)),
-                      ],
-                    )
-                  else
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _NoteList(isWide: isWide),
-                        const SizedBox(height: 40),
-                        _Week(isWide: isWide),
-                      ],
-                    ),
+                  FadeSlideIn(
+                    child: isWide
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: _NoteList(isWide: isWide)),
+                              const SizedBox(width: 40),
+                              Expanded(child: _Week(isWide: isWide)),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _NoteList(isWide: isWide),
+                              const SizedBox(height: 40),
+                              _Week(isWide: isWide),
+                            ],
+                          ),
+                  ),
                   const SizedBox(height: 40),
-                  if (isWide)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: KeyedSubtree(
-                            key: _foldersKey,
-                            child: _Folders(isWide: isWide),
+                  FadeSlideIn(
+                    child: isWide
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: KeyedSubtree(
+                                  key: _foldersKey,
+                                  child: _Folders(isWide: isWide),
+                                ),
+                              ),
+                              const SizedBox(width: 40),
+                              Expanded(
+                                child: KeyedSubtree(
+                                  key: _deviceKey,
+                                  child: _OnYourDevice(isWide: isWide),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              KeyedSubtree(
+                                key: _foldersKey,
+                                child: _Folders(isWide: isWide),
+                              ),
+                              const SizedBox(height: 40),
+                              KeyedSubtree(
+                                key: _deviceKey,
+                                child: _OnYourDevice(isWide: isWide),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 40),
-                        Expanded(
-                          child: KeyedSubtree(
-                            key: _deviceKey,
-                            child: _OnYourDevice(isWide: isWide),
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        KeyedSubtree(
-                          key: _foldersKey,
-                          child: _Folders(isWide: isWide),
-                        ),
-                        const SizedBox(height: 40),
-                        KeyedSubtree(
-                          key: _deviceKey,
-                          child: _OnYourDevice(isWide: isWide),
-                        ),
-                      ],
-                    ),
+                  ),
                   const SizedBox(height: 48),
-                  _Close(isWide: isWide),
+                  FadeSlideIn(child: _Close(isWide: isWide)),
                 ],
               ),
             ),
@@ -146,8 +149,9 @@ class NoteSyncPage extends StatelessWidget {
   }
 }
 
-/// The app's own header row — icon mark, gradient wordmark — ported from
-/// notes_home_screen.dart's app bar, not reinvented.
+/// The app's own header row — icon mark, plain wordmark — ported from
+/// notes_home_screen.dart's app bar, which dropped its gradient title for a
+/// plain `headlineSmall` one now that the app reads as iOS-native.
 class _AppHeader extends StatelessWidget {
   const _AppHeader();
 
@@ -170,15 +174,7 @@ class _AppHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [NSColors.accent, Color(0xFFB8E6BC)],
-          ).createShader(bounds),
-          child: Text(
-            'Notes',
-            style: nsText(26, weight: FontWeight.w700, color: Colors.white),
-          ),
-        ),
+        Text('Notes', style: nsText(26, weight: FontWeight.w700)),
       ],
     );
   }
@@ -243,7 +239,7 @@ class _RequestButtonState extends State<_RequestButton> {
             duration: const Duration(milliseconds: 160),
             padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
             decoration: BoxDecoration(
-              color: _hovered ? const Color(0xFF5FC768) : NSColors.accent,
+              color: _hovered ? const Color(0xFF409CFF) : NSColors.accent,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -252,16 +248,12 @@ class _RequestButtonState extends State<_RequestButton> {
                 const Icon(
                   Icons.mail_outline_rounded,
                   size: 18,
-                  color: NSColors.ground,
+                  color: Colors.white,
                 ),
                 const SizedBox(width: 10),
                 Text(
                   'Ask for a TestFlight build',
-                  style: nsText(
-                    15,
-                    weight: FontWeight.w700,
-                    color: NSColors.ground,
-                  ),
+                  style: nsText(15, weight: FontWeight.w700),
                 ),
               ],
             ),

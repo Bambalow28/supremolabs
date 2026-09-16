@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:supremolabs/app/router.dart';
 import 'package:supremolabs/data/products.dart';
 import 'package:supremolabs/main.dart';
+import 'package:supremolabs/theme/sl_theme.dart';
 
 void main() {
   testWidgets('home screen names every product', (WidgetTester tester) async {
@@ -34,25 +35,27 @@ void main() {
     expect(find.text('FORTHCOMING'), findsNWidgets(products.length - live));
   });
 
-  test('every routed product resolves to a page, unknown paths fall home', () {
+  test('every live product has a route registered, with a ground color', () {
     for (final p in products.where((p) => p.live)) {
-      final route = generateRoute(RouteSettings(name: p.route));
-      expect(route.settings.name, p.route);
+      expect(pages.containsKey(p.route), isTrue, reason: '${p.name} has no route');
       expect(
         p.ground,
         isNotNull,
         reason: '${p.name} has a route but no ground',
       );
     }
-    expect(generateRoute(const RouteSettings(name: '/nope')), isNotNull);
+    // Unknown paths aren't in the map — GoRouter's errorBuilder falls them
+    // home instead (see appRouter's errorBuilder).
+    expect(pages.containsKey('/nope'), isFalse);
   });
 
   test('routes sweep in the destination line colour, not a Material cut', () {
-    final route = generateRoute(const RouteSettings(name: '/travelsync'));
-    expect(route, isNot(isA<MaterialPageRoute<dynamic>>()));
-    expect(
-      (route as TransitionRoute<dynamic>).transitionDuration,
-      const Duration(milliseconds: 620),
+    final page = LineSweepPage(
+      path: '/travelsync',
+      builder: pages['/travelsync']!,
+      line: SLColors.accent,
     );
+    expect(page, isNot(isA<MaterialPage<dynamic>>()));
+    expect(page.transitionDuration, const Duration(milliseconds: 620));
   });
 }

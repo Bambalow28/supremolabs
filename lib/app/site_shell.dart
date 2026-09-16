@@ -10,6 +10,7 @@
 // product as a node in its own color, the one you are standing on lit, so the
 // end of a page is a junction rather than a dead end.
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../data/products.dart';
 import '../theme/sl_theme.dart';
@@ -154,11 +155,7 @@ class _Nav extends StatelessWidget {
               Hover(
                 // Replaces the stack rather than pushing another home onto
                 // it — the wordmark is "go home", not "go deeper".
-                onTap: atHome
-                    ? null
-                    : () => Navigator.of(
-                        context,
-                      ).pushNamedAndRemoveUntil('/', (route) => false),
+                onTap: atHome ? null : () => context.go('/'),
                 builder: (context, hovered) => Text(
                   'SUPREMO LABS',
                   style: SLType.eyebrow(hovered ? accent : SLColors.ink),
@@ -180,7 +177,7 @@ class _Nav extends StatelessWidget {
           // trailing slot (e.g. TravelSync's search) in its place.
           if (atHome)
             Hover(
-              onTap: () => Navigator.of(context).pushNamed('/about'),
+              onTap: () => context.push('/about'),
               builder: (context, hovered) => Text(
                 'ABOUT',
                 style: SLType.eyebrow(
@@ -246,7 +243,7 @@ class _NodeLink extends StatelessWidget {
     return Hover(
       onTap: current
           ? null
-          : () => Navigator.of(context).pushNamed(product.route!),
+          : () => context.push(product.route!),
       builder: (context, hovered) {
         final lit = hovered || current;
         return Row(

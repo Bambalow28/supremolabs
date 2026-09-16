@@ -60,6 +60,16 @@ class Product {
 /// [route] have no page here yet.
 const products = <Product>[
   Product(
+    name: 'WorkIt',
+    category: 'Fitness',
+    tagline: 'Every set, measured.',
+    cluster: Cluster.body,
+    route: '/workit',
+    ground: Color(0xFF0B0C0E),
+    accent: Color(0xFF4A9DFF), // WorkItColors.dark().tint
+    screen: 'assets/workit/today.png',
+  ),
+  Product(
     name: 'TravelSync',
     category: 'Travel',
     tagline: 'Trip planning, done right.',
@@ -68,6 +78,15 @@ const products = <Product>[
     ground: Color(0xFF0B0F1A),
     accent: Color(0xFF4B76FA), // ts_colors.dart primaryBlue
     screen: 'assets/travelsync/home.png',
+  ),
+  Product(
+    name: 'PlanSync',
+    category: 'Planning',
+    tagline: 'Plans that actually happen.',
+    cluster: Cluster.journeys,
+    route: '/plansync',
+    ground: Color(0xFF0A0E14),
+    accent: Color(0xFF2DD4BF), // ps_colors.dart accent
   ),
   Product(
     name: 'WealthSync',
@@ -80,32 +99,31 @@ const products = <Product>[
     screen: 'assets/wealthsync/main_page.png',
   ),
   Product(
-    name: 'PlanSync',
-    category: 'Planning',
-    tagline: 'Plans that actually happen.',
-    cluster: Cluster.journeys,
-    route: '/plansync',
-    ground: Color(0xFF0A0E14),
-    accent: Color(0xFF2DD4BF), // ps_colors.dart accent
-  ),
-  Product(
     name: 'NoteSync',
     category: 'Notes',
     tagline: 'Notes that stay yours.',
     cluster: Cluster.everyday,
     route: '/notesync',
-    ground: Color(0xFF0B0F1A),
-    accent: Color(0xFF4CAF55), // ns_colors.dart accent
+    ground: Color(0xFF000000),
+    accent: Color(0xFF0A84FF), // ns_colors.dart accent
   ),
   Product(
-    name: 'WorkIt',
-    category: 'Fitness',
-    tagline: 'Every set, measured.',
-    cluster: Cluster.body,
-    route: '/workit',
-    ground: Color(0xFF0B0C0E),
-    accent: Color(0xFF4A9DFF), // WorkItColors.dark().tint
-    screen: 'assets/workit/today.png',
+    name: 'Diamo',
+    category: 'Family',
+    tagline: 'Every first, kept.',
+    cluster: Cluster.people,
+    route: '/diamo',
+    ground: Color(0xFF1C1216),
+    accent: Color(0xFF7A3145), // app_theme.dart diaMoTheme seed color
+  ),
+  Product(
+    name: 'Stanverse',
+    category: 'Community',
+    tagline: 'Your fandom, live.',
+    cluster: Cluster.people,
+    route: '/stanverse',
+    ground: Color(0xFF0E0D10),
+    accent: Color(0xFFF5F2EC), // stanverse_theme.dart StanTicker.paper
   ),
   Product(
     name: 'Juwa Wealth',
@@ -130,24 +148,6 @@ const products = <Product>[
     category: 'Lifestyle',
     tagline: 'Your closet, organized.',
     cluster: Cluster.everyday,
-  ),
-  Product(
-    name: 'Diamo',
-    category: 'Family',
-    tagline: 'Every first, kept.',
-    cluster: Cluster.people,
-    route: '/diamo',
-    ground: Color(0xFF1C1216),
-    accent: Color(0xFF7A3145), // app_theme.dart diaMoTheme seed color
-  ),
-  Product(
-    name: 'Stanverse',
-    category: 'Community',
-    tagline: 'Your fandom, live.',
-    cluster: Cluster.people,
-    route: '/stanverse',
-    ground: Color(0xFF0E0D10),
-    accent: Color(0xFFF5F2EC), // stanverse_theme.dart StanTicker.paper
   ),
 ];
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../about/about_page.dart';
 import '../data/products.dart';
@@ -20,7 +21,7 @@ import '../theme/sl_theme.dart';
 /// Sub-routes under a product (e.g. `/travelsync/features`) are real
 /// stations on that product's own single scrolling page, not separate pages
 /// — see the `initialSection` comment on each product page.
-final _pages = <String, WidgetBuilder>{
+final pages = <String, WidgetBuilder>{
   '/': (_) => const HomePage(),
   '/about': (_) => const AboutPage(),
   '/travelsync': (_) => TravelSyncPage(),
@@ -56,30 +57,46 @@ final _pages = <String, WidgetBuilder>{
   '/stanverse/desk': (_) => const StanverseDeskPage(),
 };
 
-Route<dynamic> generateRoute(RouteSettings settings) {
-  final name = settings.name ?? '/';
-  final builder = _pages[name] ?? _pages['/']!;
-  return _LineSweep(
-    builder: builder,
-    settings: settings.name == null ? const RouteSettings(name: '/') : settings,
-    // The destination's own line color rides across the screen, so arriving
-    // somewhere reads as travelling down that line rather than a page swap.
-    line: productForPath(name)?.accent ?? SLColors.accent,
-  );
-}
+/// Root navigator key, so a route not in [pages] can redirect to home
+/// without needing a BuildContext of its own.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
+/// `go_router`-backed so every `context.push` adds a real browser history
+/// entry (the plain `Navigator.pushNamed` this replaced only rewrote the
+/// current one — the back button had nothing to go back to).
+final appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
+  // An unknown path renders the home page in place, same as the old
+  // fallback — no redirect, so a mistyped/borrowed link doesn't bounce.
+  errorBuilder: (context, state) => const HomePage(),
+  routes: [
+    for (final entry in pages.entries)
+      GoRoute(
+        path: entry.key,
+        pageBuilder: (context, state) => LineSweepPage(
+          path: entry.key,
+          builder: entry.value,
+          // The destination's own line color rides across the screen, so
+          // arriving somewhere reads as travelling down that line rather
+          // than a page swap.
+          line: productForPath(entry.key)?.accent ?? SLColors.accent,
+        ),
+      ),
+  ],
+);
 
 /// Replaces the default page cut with a wipe in the destination's line color:
 /// the band sweeps in over the page you are leaving, then off the far side to
 /// reveal the one you asked for.
-class _LineSweep extends PageRouteBuilder<dynamic> {
-  final Color line;
-
-  _LineSweep({
+class LineSweepPage extends CustomTransitionPage<void> {
+  LineSweepPage({
+    required String path,
     required WidgetBuilder builder,
-    required super.settings,
-    required this.line,
+    required Color line,
   }) : super(
-         pageBuilder: (context, _, _) => builder(context),
+         key: ValueKey(path),
+         name: path,
+         child: Builder(builder: builder),
          transitionDuration: const Duration(milliseconds: 620),
          reverseTransitionDuration: const Duration(milliseconds: 520),
          transitionsBuilder: (context, animation, _, child) {
