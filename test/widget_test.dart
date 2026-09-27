@@ -37,7 +37,11 @@ void main() {
 
   test('every live product has a route registered, with a ground color', () {
     for (final p in products.where((p) => p.live)) {
-      expect(pages.containsKey(p.route), isTrue, reason: '${p.name} has no route');
+      expect(
+        pages.containsKey(p.route),
+        isTrue,
+        reason: '${p.name} has no route',
+      );
       expect(
         p.ground,
         isNotNull,

@@ -126,10 +126,13 @@ const products = <Product>[
     accent: Color(0xFFF5F2EC), // stanverse_theme.dart StanTicker.paper
   ),
   Product(
-    name: 'Juwa Wealth',
+    name: 'FamFi',
     category: 'Finance',
-    tagline: 'One ledger. Two lives, kept separate.',
+    tagline: 'One wallet for the two of us.',
     cluster: Cluster.money,
+    route: '/famfi',
+    ground: Color(0xFF0C0E12), // juwa_wealth JuwaColors.dark().bg
+    accent: Color(0xFF2E5BE8), // juwa_wealth swatch 'cobalt'
   ),
   Product(
     name: 'HoopSync',

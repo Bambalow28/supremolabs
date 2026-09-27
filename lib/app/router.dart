@@ -5,6 +5,8 @@ import '../about/about_page.dart';
 import '../data/products.dart';
 import '../home/home_page.dart';
 import '../products/diamo/diamo_page.dart';
+import '../products/famfi/famfi_console_page.dart';
+import '../products/famfi/famfi_page.dart';
 import '../products/notesync/notesync_page.dart';
 import '../products/plansync/desk/desk_page.dart';
 import '../products/plansync/plansync_page.dart';
@@ -55,6 +57,10 @@ final pages = <String, WidgetBuilder>{
   '/stanverse/marketplace': (_) => StanversePage(initialSection: 'marketplace'),
   // Private back office — deliberately not linked from any public page.
   '/stanverse/desk': (_) => const StanverseDeskPage(),
+  '/famfi': (_) => const FamFiPage(),
+  // The desktop console — every control the phone app has. Linked from
+  // /famfi's nav and hero.
+  '/famfi/personal': (_) => const FamFiConsolePage(),
 };
 
 /// Root navigator key, so a route not in [pages] can redirect to home

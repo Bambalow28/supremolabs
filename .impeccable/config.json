@@ -1,0 +1,20 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "geist",
+        "createdAt": "2026-09-25T23:48:57.593Z",
+        "reason": "agent: product pages keep the product's own type per DESIGN.md 'Product pages'; FamFi app uses SF, Geist is the web stand-in"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "material symbols rounded",
+        "createdAt": "2026-09-25T23:48:57.691Z",
+        "reason": "agent: FamFi app's icon set is Material rounded (juwa theme.dart juwaIcons)"
+      }
+    ]
+  }
+}
