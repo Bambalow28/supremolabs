@@ -106,8 +106,13 @@ class LineSweepPage extends CustomTransitionPage<void> {
          transitionDuration: const Duration(milliseconds: 620),
          reverseTransitionDuration: const Duration(milliseconds: 520),
          transitionsBuilder: (context, animation, _, child) {
-           // A viewer who asked the OS to stop animation gets the page.
-           if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+           // A viewer who asked the OS to stop animation gets the page. Same
+           // for the very first page in the stack (a hard reload or a fresh
+           // deep link, with no previous page to sweep over) — animating
+           // that in release/dart2js hits a framework null-check crash, since
+           // there's nothing behind the band to reveal.
+           if ((MediaQuery.maybeOf(context)?.disableAnimations ?? false) ||
+               (ModalRoute.of(context)?.isFirst ?? true)) {
              return child;
            }
            return Stack(

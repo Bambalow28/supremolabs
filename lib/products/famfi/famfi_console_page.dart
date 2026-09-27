@@ -10,7 +10,6 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart' show Firebase;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:juwa_wealth/models.dart';
@@ -37,9 +36,13 @@ class FamFiConsolePage extends StatefulWidget {
 }
 
 class _FamFiConsolePageState extends State<FamFiConsolePage> {
-  // Guards against a Firebase app not being registered at all (see main.dart)
-  // — the console should degrade to a message, never take the page down.
-  final bool _noBackend = Firebase.apps.isEmpty;
+  // Guards against there being no *default* Firebase app (see main.dart) —
+  // Firebase.apps.isEmpty doesn't work here since supremolabs already
+  // registers other products' apps under names (plansync/stanverse/workit),
+  // so FirebaseAuth.instance (unnamed) can still throw synchronously even
+  // when Firebase.apps is non-empty. The console should degrade to a
+  // message, never take the page down.
+  bool _noBackend = false;
   late final Future<JuwaStore> _future = JuwaStore.load();
   StreamSubscription<User?>? _authSub;
   HouseholdSync? _sync;
@@ -50,8 +53,10 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
   @override
   void initState() {
     super.initState();
-    if (!_noBackend) {
+    try {
       _authSub = FirebaseAuth.instance.authStateChanges().listen(_onUser);
+    } catch (_) {
+      _noBackend = true;
     }
   }
 
