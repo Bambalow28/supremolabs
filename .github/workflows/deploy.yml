@@ -10,6 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pubspec path-depends on ../juwa_wealth (the FamFi console). Private
+      # repo, so this needs a token with read access to it.
+      - uses: actions/checkout@v4
+        with:
+          repository: Bambalow28/juwa_wealth
+          token: ${{ secrets.JUWA_WEALTH_TOKEN }}
+          path: juwa_wealth
+      - run: mv juwa_wealth ..
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
