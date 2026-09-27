@@ -9,7 +9,9 @@
 // visits, so the join screen only shows up once per browser.
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:juwa_wealth/models.dart';
@@ -36,13 +38,10 @@ class FamFiConsolePage extends StatefulWidget {
 }
 
 class _FamFiConsolePageState extends State<FamFiConsolePage> {
-  // Guards against there being no *default* Firebase app (see main.dart) —
-  // Firebase.apps.isEmpty doesn't work here since supremolabs already
-  // registers other products' apps under names (plansync/stanverse/workit),
-  // so FirebaseAuth.instance (unnamed) can still throw synchronously even
-  // when Firebase.apps is non-empty. The console should degrade to a
-  // message, never take the page down.
+  // Set if the named 'famfi' app (main.dart) isn't there — the console
+  // degrades to a message, never takes the page down.
   bool _noBackend = false;
+  FirebaseAuth? _auth;
   late final Future<JuwaStore> _future = JuwaStore.load();
   StreamSubscription<User?>? _authSub;
   HouseholdSync? _sync;
@@ -54,7 +53,10 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
   void initState() {
     super.initState();
     try {
-      _authSub = FirebaseAuth.instance.authStateChanges().listen(_onUser);
+      final app = Firebase.app('famfi');
+      syncDb = FirebaseFirestore.instanceFor(app: app);
+      _auth = FirebaseAuth.instanceFor(app: app);
+      _authSub = _auth!.authStateChanges().listen(_onUser);
     } catch (_) {
       _noBackend = true;
     }
@@ -73,7 +75,7 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
       // No anonymous session yet (fresh browser) — start one; this handler
       // runs again once it lands.
       try {
-        await FirebaseAuth.instance.signInAnonymously();
+        await _auth!.signInAnonymously();
       } catch (e) {
         if (mounted) setState(() => _error = e);
       }
@@ -103,42 +105,49 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
         Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1280),
-            child: FutureBuilder<JuwaStore>(
-              future: _future,
-              builder: (context, snap) {
-                final store = snap.data;
-                if (store == null) {
-                  return const SizedBox(
-                    height: 720,
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                if (_noBackend) {
-                  return const _ConsoleMessage(
-                    text: 'The household backend is offline right now — '
-                        'check back shortly.',
-                  );
-                }
-                if (_error != null) {
-                  return _ConsoleMessage(
-                    text: "Couldn't reach your household. "
-                        'Check your connection and reload.',
-                  );
-                }
-                if (_user == null || _hid == null) {
-                  return _user == null
-                      ? const SizedBox(
-                          height: 720,
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      : _JoinCard(
-                          uid: _user!.uid,
-                          onJoined: (hid, owner) =>
-                              _connect(store, hid, owner),
-                        );
-                }
-                return FamFiConsoleBody(store: store);
-              },
+            // Every state below (message, join card) reads context.c, not
+            // just the console body — so the theme wraps them all.
+            child: Theme(
+              data: famFiTheme(MediaQuery.platformBrightnessOf(context)),
+              child: FutureBuilder<JuwaStore>(
+                future: _future,
+                builder: (context, snap) {
+                  final store = snap.data;
+                  if (store == null) {
+                    return const SizedBox(
+                      height: 720,
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (_noBackend) {
+                    return const _ConsoleMessage(
+                      text:
+                          'The household backend is offline right now — '
+                          'check back shortly.',
+                    );
+                  }
+                  if (_error != null) {
+                    return _ConsoleMessage(
+                      text:
+                          "Couldn't reach your household. "
+                          'Check your connection and reload.',
+                    );
+                  }
+                  if (_user == null || _hid == null) {
+                    return _user == null
+                        ? const SizedBox(
+                            height: 720,
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        : _JoinCard(
+                            uid: _user!.uid,
+                            onJoined: (hid, owner) =>
+                                _connect(store, hid, owner),
+                          );
+                  }
+                  return FamFiConsoleBody(store: store);
+                },
+              ),
             ),
           ),
         ),
@@ -202,7 +211,9 @@ class _JoinCardState extends State<_JoinCard> {
         widget.onJoined(hid, _owner);
       }
     } catch (_) {
-      setState(() => _error = "Couldn't reach the server. Check your connection.");
+      setState(
+        () => _error = "Couldn't reach the server. Check your connection.",
+      );
     }
     if (mounted) setState(() => _busy = false);
   }

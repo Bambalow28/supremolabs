@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/router.dart';
+import 'products/famfi/famfi_firebase_options.dart';
 import 'products/plansync/desk/plansync_firebase_options.dart';
 import 'products/workit/desk/workit_firebase_options.dart';
 import 'stanverse_firebase_options.dart';
@@ -28,6 +29,10 @@ void main() async {
   // Named app so the /workit/desk page can read WorkIt's own Firebase
   // project (workit-supremolabs) — the referral payout ledger.
   await Firebase.initializeApp(name: 'workit', options: workItFirebaseOptions);
+  // Named app so the /famfi/personal console can read juwa_wealth's own
+  // Firebase project (juwa-wealth-app). Not the default app — registering
+  // it unnamed broke boot for the whole site (3021b11).
+  await Firebase.initializeApp(name: 'famfi', options: famFiFirebaseOptions);
   // Read-only: the /travelsync in-page search reads travelsync's own public
   // tables (travel_cards, profiles) with its own anon key — same project
   // travelsync_website points at in prod.
