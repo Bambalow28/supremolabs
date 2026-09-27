@@ -63,20 +63,31 @@ class _BudgetPanelState extends State<BudgetPanel> {
               ),
               const SizedBox(width: 14),
               if (store.budgets.isNotEmpty)
-                Text.rich(
-                  TextSpan(
-                    style: ff(14.5, color: c.muted),
-                    children: [
-                      TextSpan(
-                        text: ffMoney(spentAll),
-                        style: ff(14.5, weight: FontWeight.w700, color: c.ink),
-                      ),
-                      const TextSpan(text: ' of '),
-                      TextSpan(
-                        text: ffMoney(targetAll),
-                        style: ff(14.5, weight: FontWeight.w700, color: c.ink),
-                      ),
-                    ],
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      style: ff(14.5, color: c.muted),
+                      children: [
+                        TextSpan(
+                          text: ffMoney(spentAll),
+                          style: ff(
+                            14.5,
+                            weight: FontWeight.w700,
+                            color: c.ink,
+                          ),
+                        ),
+                        const TextSpan(text: ' of '),
+                        TextSpan(
+                          text: ffMoney(targetAll),
+                          style: ff(
+                            14.5,
+                            weight: FontWeight.w700,
+                            color: c.ink,
+                          ),
+                        ),
+                      ],
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
             ],

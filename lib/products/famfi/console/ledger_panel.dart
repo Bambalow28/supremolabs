@@ -262,21 +262,28 @@ class _LedgerPanelState extends State<LedgerPanel> {
                 ),
               ),
               const SizedBox(width: 16),
-              Text.rich(
-                TextSpan(
-                  style: ff(13.5, color: c.muted),
-                  children: [
-                    const TextSpan(text: 'In '),
-                    TextSpan(
-                      text: ffMoney(totalIn, sign: true),
-                      style: ff(13.5, weight: FontWeight.w700, color: c.good),
-                    ),
-                    const TextSpan(text: ' · Out '),
-                    TextSpan(
-                      text: ffMoney(totalOut),
-                      style: ff(13.5, weight: FontWeight.w700, color: c.ink),
-                    ),
-                  ],
+              Flexible(
+                child: Text.rich(
+                  TextSpan(
+                    style: ff(13.5, color: c.muted),
+                    children: [
+                      const TextSpan(text: 'In '),
+                      TextSpan(
+                        text: ffMoney(totalIn, sign: true),
+                        style: ff(
+                          13.5,
+                          weight: FontWeight.w700,
+                          color: c.good,
+                        ),
+                      ),
+                      const TextSpan(text: ' · Out '),
+                      TextSpan(
+                        text: ffMoney(totalOut),
+                        style: ff(13.5, weight: FontWeight.w700, color: c.ink),
+                      ),
+                    ],
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -524,125 +531,158 @@ class _EntryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final account = store.accounts.where((a) => a.id == accountId).firstOrNull;
-    return Container(
-      color: c.bg,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 96,
-            child: GestureDetector(
-              onTap: () async {
-                final d = await showDatePicker(
-                  context: context,
-                  initialDate: date,
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2100),
-                );
-                if (d != null) onDateChanged(DateTime(d.year, d.month, d.day));
-              },
-              child: Text(
-                ffDate(date),
-                style: ff(13, weight: FontWeight.w700, color: c.ink),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 3,
-            child: TextField(
-              controller: name,
-              style: ff(14, color: c.ink),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: 'Name — e.g. Loblaws',
-                hintStyle: ff(14, color: c.faint),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: DPickerButton(
-              onTap: () async {
-                final id = await pickFrom<String>(
-                  context,
-                  title: 'Account',
-                  items: [for (final a in store.accounts) (a.name, a.id)],
-                );
-                if (id != null) onAccountChanged(id);
-              },
-              child: Text(
-                account?.name ?? 'Account',
-                style: ff(13, color: c.ink),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: DPickerButton(
-              onTap: () async {
-                final items = <(String, String?)>[
-                  ('None', null),
-                  for (final b in store.budgets) ('${b.name} (Budget)', b.id),
-                  for (final cat in store.categories) (cat.name, cat.id),
-                ];
-                final id = await pickFrom<String?>(
-                  context,
-                  title: 'Category',
-                  items: items,
-                );
-                onCategoryChanged(id);
-              },
-              child: Text(
-                categoryLabel(store, categoryId),
-                style: ff(13, color: c.ink),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 128,
-            child: SegmentedTabs(
-              labels: const ['Josh', 'Judy'],
-              selected: by == Owner.josh ? 0 : 1,
-              onChanged: (i) => onByChanged(i == 0 ? Owner.josh : Owner.judy),
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 76,
-            child: SegmentedTabs(
-              labels: const ['−', '+'],
-              selected: negative ? 0 : 1,
-              onChanged: (i) => onSignChanged(i == 0),
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 110,
-            child: TextField(
-              controller: amount,
-              textAlign: TextAlign.right,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: const [MoneyTextFormatter()],
-              style: ff(14, weight: FontWeight.w700, color: c.ink),
-              decoration: InputDecoration(
-                isDense: true,
-                prefixText: r'$',
-                hintText: '0.00',
-                hintStyle: ff(14, color: c.faint),
-              ),
-              onSubmitted: (_) => onSubmit(),
-            ),
-          ),
-        ],
+
+    final dateField = SizedBox(
+      width: 96,
+      child: GestureDetector(
+        onTap: () async {
+          final d = await showDatePicker(
+            context: context,
+            initialDate: date,
+            firstDate: DateTime(2000),
+            lastDate: DateTime(2100),
+          );
+          if (d != null) onDateChanged(DateTime(d.year, d.month, d.day));
+        },
+        child: Text(
+          ffDate(date),
+          style: ff(13, weight: FontWeight.w700, color: c.ink),
+        ),
       ),
+    );
+    final nameField = TextField(
+      controller: name,
+      style: ff(14, color: c.ink),
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: 'Name — e.g. Loblaws',
+        hintStyle: ff(14, color: c.faint),
+      ),
+    );
+    final accountField = DPickerButton(
+      onTap: () async {
+        final id = await pickFrom<String>(
+          context,
+          title: 'Account',
+          items: [for (final a in store.accounts) (a.name, a.id)],
+        );
+        if (id != null) onAccountChanged(id);
+      },
+      child: Text(
+        account?.name ?? 'Account',
+        style: ff(13, color: c.ink),
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+    final categoryField = DPickerButton(
+      onTap: () async {
+        final items = <(String, String?)>[
+          ('None', null),
+          for (final b in store.budgets) ('${b.name} (Budget)', b.id),
+          for (final cat in store.categories) (cat.name, cat.id),
+        ];
+        final id = await pickFrom<String?>(
+          context,
+          title: 'Category',
+          items: items,
+        );
+        onCategoryChanged(id);
+      },
+      child: Text(
+        categoryLabel(store, categoryId),
+        style: ff(13, color: c.ink),
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+    final ownerField = SizedBox(
+      width: 128,
+      child: SegmentedTabs(
+        labels: const ['Josh', 'Judy'],
+        selected: by == Owner.josh ? 0 : 1,
+        onChanged: (i) => onByChanged(i == 0 ? Owner.josh : Owner.judy),
+      ),
+    );
+    final signField = SizedBox(
+      width: 76,
+      child: SegmentedTabs(
+        labels: const ['−', '+'],
+        selected: negative ? 0 : 1,
+        onChanged: (i) => onSignChanged(i == 0),
+      ),
+    );
+    final amountField = SizedBox(
+      width: 110,
+      child: TextField(
+        controller: amount,
+        textAlign: TextAlign.right,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: const [MoneyTextFormatter()],
+        style: ff(14, weight: FontWeight.w700, color: c.ink),
+        decoration: InputDecoration(
+          isDense: true,
+          prefixText: r'$',
+          hintText: '0.00',
+          hintStyle: ff(14, color: c.faint),
+        ),
+        onSubmitted: (_) => onSubmit(),
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, cons) {
+        // Seven fields in one Row crush the account/category pickers to
+        // nothing once the fixed-width fields (date/owner/sign/amount, ~460px)
+        // eat most of a tablet-width panel — two rows instead, same fields.
+        final stacked = cons.maxWidth < 720;
+        return Container(
+          color: c.bg,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: stacked
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        dateField,
+                        const SizedBox(width: 10),
+                        Expanded(child: nameField),
+                        const SizedBox(width: 10),
+                        amountField,
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(child: accountField),
+                        const SizedBox(width: 10),
+                        Expanded(child: categoryField),
+                        const SizedBox(width: 10),
+                        ownerField,
+                        const SizedBox(width: 10),
+                        signField,
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    dateField,
+                    const SizedBox(width: 10),
+                    Expanded(flex: 3, child: nameField),
+                    const SizedBox(width: 10),
+                    Expanded(flex: 2, child: accountField),
+                    const SizedBox(width: 10),
+                    Expanded(flex: 2, child: categoryField),
+                    const SizedBox(width: 10),
+                    ownerField,
+                    const SizedBox(width: 10),
+                    signField,
+                    const SizedBox(width: 10),
+                    amountField,
+                  ],
+                ),
+        );
+      },
     );
   }
 }

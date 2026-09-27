@@ -158,6 +158,8 @@ class FFCard extends StatelessWidget {
                   children: [
                     Text(
                       kind,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: ff(12.5, color: on.withValues(alpha: .86)),
                     ),
                     FFStamp(stamp, color: on),
@@ -167,17 +169,30 @@ class FFCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                ffMoney(balance),
-                style: ff(17, weight: FontWeight.w800, color: on),
-              ),
-              if (balance < 0)
-                Text('owed', style: ff(11.5, color: on.withValues(alpha: .8))),
-            ],
+          // Capped so a wide balance (e.g. a large negative "owed" figure)
+          // can't starve the name/kind column down to nothing on a narrow
+          // card — this is the tightest spot the compact wallet rail hits.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 96),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  ffMoney(balance),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: ff(17, weight: FontWeight.w800, color: on),
+                ),
+                if (balance < 0)
+                  Text(
+                    'owed',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: ff(11.5, color: on.withValues(alpha: .8)),
+                  ),
+              ],
+            ),
           ),
         ],
       ),

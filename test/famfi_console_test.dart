@@ -3,9 +3,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:juwa_wealth/store.dart';
 // ignore: depend_on_referenced_packages
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supremolabs/products/famfi/famfi_console_page.dart';
+
+// These tests exercise FamFiConsoleBody directly, not FamFiConsolePage — the
+// page gates on Firebase Auth + household join (no Firebase in widget
+// tests), same as juwa_wealth's own widget_test.dart tests Shell directly
+// rather than going through AuthGate.
+Future<Widget> _console() async =>
+    MaterialApp(home: Scaffold(body: FamFiConsoleBody(store: await JuwaStore.load())));
 
 String d(String s) => '${s}T00:00:00.000';
 // Minimal household: enough to fill every tab's table/calendar.
@@ -107,9 +115,12 @@ final seed = {
 
 void main() {
   testWidgets('empty state renders and switching tabs works', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     SharedPreferences.setMockInitialValues({});
 
-    await tester.pumpWidget(const MaterialApp(home: FamFiConsolePage()));
+    await tester.pumpWidget(await _console());
     await tester.pumpAndSettle();
 
     // No accounts yet: the rail's empty state and the Payday tab's own
@@ -145,7 +156,7 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'juwa_wealth_v3': jsonEncode(seed),
     });
-    await tester.pumpWidget(const MaterialApp(home: FamFiConsolePage()));
+    await tester.pumpWidget(await _console());
     await tester.pumpAndSettle();
     for (final tab in ['Ledger', 'Bills', 'Budget', 'Payday']) {
       await tester.tap(find.text(tab).first);
@@ -153,6 +164,30 @@ void main() {
       expect(tester.takeException(), isNull, reason: '$tab tab');
     }
   });
+
+  // iPad portrait (768) and landscape (1024) — the tab bar and its search
+  // field are the tight spot: the wallet rail's fixed 344px in the
+  // non-stacked (landscape) layout leaves the header less room than the
+  // compact breakpoint alone would suggest.
+  for (final size in [Size(768, 1024), Size(1024, 768)]) {
+    testWidgets('every tab lays out with real data at tablet size $size', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      SharedPreferences.setMockInitialValues({
+        'juwa_wealth_v3': jsonEncode(seed),
+      });
+      await tester.pumpWidget(await _console());
+      await tester.pumpAndSettle();
+      for (final tab in ['Ledger', 'Bills', 'Budget', 'Payday']) {
+        await tester.tap(find.text(tab).first);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '$tab tab at $size');
+      }
+    });
+  }
 
   testWidgets('opening a second account shows that account, not the first', (
     tester,
@@ -163,7 +198,7 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'juwa_wealth_v3': jsonEncode(seed),
     });
-    await tester.pumpWidget(const MaterialApp(home: FamFiConsolePage()));
+    await tester.pumpWidget(await _console());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Josh Chequing').first);
@@ -184,7 +219,7 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'juwa_wealth_v3': jsonEncode(seed),
     });
-    await tester.pumpWidget(const MaterialApp(home: FamFiConsolePage()));
+    await tester.pumpWidget(await _console());
     await tester.pumpAndSettle();
 
     // Payday is the default tab: two cheque cards, one per owner.

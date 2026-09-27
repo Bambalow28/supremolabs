@@ -147,7 +147,7 @@ class WalletRail extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              'Saved in this browser · phone sync arrives with Firebase',
+              'Synced with your household · same data as the phones',
               style: ff(11.5, color: c.faint),
               maxLines: 2,
             ),
@@ -175,7 +175,9 @@ class WalletRail extends StatelessWidget {
                       style: ff(13, color: c.muted),
                     ),
                   )
-                : SizedBox(height: 92, child: cards),
+                // Tall enough for a card whose kind+stamp wraps to its own
+                // line (see FFCard) plus a delta pill hanging below it.
+                : SizedBox(height: 120, child: cards),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
               child: addButtonInner,

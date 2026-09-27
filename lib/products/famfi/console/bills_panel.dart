@@ -109,18 +109,21 @@ class _BillsPanelState extends State<BillsPanel> {
                 ),
               ),
               const SizedBox(width: 14),
-              Text.rich(
-                TextSpan(
-                  style: ff(14.5, color: c.muted),
-                  children: [
-                    TextSpan(
-                      text: ffMoney(store.monthlyBillTotal),
-                      style: ff(14.5, weight: FontWeight.w700, color: c.ink),
-                    ),
-                    const TextSpan(
-                      text: ' a month · hover a bill to mark it paid',
-                    ),
-                  ],
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    style: ff(14.5, color: c.muted),
+                    children: [
+                      TextSpan(
+                        text: ffMoney(store.monthlyBillTotal),
+                        style: ff(14.5, weight: FontWeight.w700, color: c.ink),
+                      ),
+                      const TextSpan(
+                        text: ' a month · hover a bill to mark it paid',
+                      ),
+                    ],
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

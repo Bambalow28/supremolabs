@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/router.dart';
+import 'products/famfi/famfi_firebase_options.dart';
 import 'products/plansync/desk/plansync_firebase_options.dart';
 import 'products/workit/desk/workit_firebase_options.dart';
 import 'stanverse_firebase_options.dart';
@@ -13,6 +14,11 @@ void main() async {
   // Clean paths (/travelsync) instead of hash URLs (/#/travelsync).
   usePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
+  // Default (unnamed) app: the /famfi/personal console reads juwa_wealth's
+  // own HouseholdSync/Household, which call FirebaseAuth.instance /
+  // FirebaseFirestore.instance directly (no instanceFor), so this must stay
+  // the default app rather than a named one.
+  await Firebase.initializeApp(options: famFiFirebaseOptions);
   // Named app so the /plansync/desk page can talk to PlanSync's own
   // Firebase project without a default app colliding with it later.
   await Firebase.initializeApp(

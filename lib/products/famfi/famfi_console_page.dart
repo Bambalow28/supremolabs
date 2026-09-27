@@ -1,15 +1,21 @@
 // /famfi/personal — the desktop console: every control the phone app has,
-// laid out for a long money session. Reads and writes straight through
-// JuwaStore (shared_preferences -> browser localStorage on web); no backend
-// yet, so the rail footer says so honestly (see juwa_wealth/docs/firebase-plan.md).
+// laid out for a long money session. Reads and writes through JuwaStore, kept
+// live with the household's Firestore data via HouseholdSync — the same sync
+// the phone app runs (see juwa_wealth/docs/firebase-plan.md).
 //
-// No sign-in gate for now, per spec — the mockup's Apple sign-in gate is
-// deferred until Firebase ships.
+// No Apple sign-in on the web: this browser signs in anonymously and joins
+// the household with the same invite code a phone would use for a second
+// phone (Household.join). Firebase Auth persists that anonymous uid across
+// visits, so the join screen only shows up once per browser.
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
-import 'package:juwa_wealth/widgets.dart' show AmountField;
+import 'package:juwa_wealth/sync.dart';
+import 'package:juwa_wealth/widgets.dart' show AmountField, SegmentedTabs;
 
 import '../../app/site_shell.dart';
 import 'console/bills_panel.dart';
@@ -31,39 +37,250 @@ class FamFiConsolePage extends StatefulWidget {
 
 class _FamFiConsolePageState extends State<FamFiConsolePage> {
   late final Future<JuwaStore> _future = JuwaStore.load();
+  late final StreamSubscription<User?> _authSub;
+  HouseholdSync? _sync;
+  User? _user;
+  String? _hid;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSub = FirebaseAuth.instance.authStateChanges().listen(_onUser);
+  }
+
+  @override
+  void dispose() {
+    _authSub.cancel();
+    _sync?.stop();
+    super.dispose();
+  }
+
+  Future<void> _onUser(User? user) async {
+    setState(() => _user = user);
+    if (user == null) {
+      // No anonymous session yet (fresh browser) — start one; this handler
+      // runs again once it lands.
+      try {
+        await FirebaseAuth.instance.signInAnonymously();
+      } catch (e) {
+        if (mounted) setState(() => _error = e);
+      }
+      return;
+    }
+    try {
+      final store = await _future;
+      final h = await Household.of(user.uid);
+      if (h != null) await _connect(store, h.hid, h.owner);
+    } catch (e) {
+      if (mounted) setState(() => _error = e);
+    }
+  }
+
+  Future<void> _connect(JuwaStore store, String hid, Owner owner) async {
+    store.me = owner;
+    _sync = HouseholdSync(store, hid);
+    await _sync!.start(importLocal: false);
+    if (mounted) setState(() => _hid = hid);
+  }
 
   @override
   Widget build(BuildContext context) {
     return SiteShell(
       ground: FFColors.ground,
       children: [
-        FutureBuilder<JuwaStore>(
-          future: _future,
-          builder: (context, snap) {
-            final store = snap.data;
-            if (store == null) {
-              return const SizedBox(
-                height: 720,
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-            return _Console(store: store);
-          },
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1280),
+            child: FutureBuilder<JuwaStore>(
+              future: _future,
+              builder: (context, snap) {
+                final store = snap.data;
+                if (store == null) {
+                  return const SizedBox(
+                    height: 720,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (_error != null) {
+                  return _ConsoleMessage(
+                    text: "Couldn't reach your household. "
+                        'Check your connection and reload.',
+                  );
+                }
+                if (_user == null || _hid == null) {
+                  return _user == null
+                      ? const SizedBox(
+                          height: 720,
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      : _JoinCard(
+                          uid: _user!.uid,
+                          onJoined: (hid, owner) =>
+                              _connect(store, hid, owner),
+                        );
+                }
+                return FamFiConsoleBody(store: store);
+              },
+            ),
+          ),
         ),
       ],
     );
   }
 }
 
-class _Console extends StatefulWidget {
-  final JuwaStore store;
-  const _Console({required this.store});
+class _ConsoleMessage extends StatelessWidget {
+  final String text;
+  const _ConsoleMessage({required this.text});
 
   @override
-  State<_Console> createState() => _ConsoleState();
+  Widget build(BuildContext context) => SizedBox(
+    height: 720,
+    child: Center(
+      child: Text(
+        text,
+        style: ff(15, color: context.c.muted),
+        textAlign: TextAlign.center,
+      ),
+    ),
+  );
 }
 
-class _ConsoleState extends State<_Console> {
+/// Shown once per browser: joins the household with the same invite code a
+/// phone uses to add a second phone (Household.invite/join in sync.dart).
+class _JoinCard extends StatefulWidget {
+  final String uid;
+  final void Function(String hid, Owner owner) onJoined;
+  const _JoinCard({required this.uid, required this.onJoined});
+
+  @override
+  State<_JoinCard> createState() => _JoinCardState();
+}
+
+class _JoinCardState extends State<_JoinCard> {
+  Owner _owner = Owner.josh;
+  final _code = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  Future<void> _join() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final hid = await Household.join(widget.uid, _owner, _code.text);
+      if (hid == null) {
+        setState(
+          () => _error = 'That code is wrong or expired. Ask for a new one.',
+        );
+      } else {
+        widget.onJoined(hid, _owner);
+      }
+    } catch (_) {
+      setState(() => _error = "Couldn't reach the server. Check your connection.");
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return SizedBox(
+      height: 720,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 340),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Join your household',
+                style: ff(20, weight: FontWeight.w800, color: c.ink),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Open the household sheet on either phone and invite this '
+                'browser — the code works for 10 minutes.',
+                style: ff(13.5, color: c.muted),
+              ),
+              const SizedBox(height: 20),
+              SegmentedTabs(
+                labels: const ['Josh', 'Judy'],
+                selected: _owner == Owner.josh ? 0 : 1,
+                onChanged: (i) =>
+                    setState(() => _owner = i == 0 ? Owner.josh : Owner.judy),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _code,
+                textCapitalization: TextCapitalization.characters,
+                autocorrect: false,
+                maxLength: 6,
+                style: ff(
+                  18,
+                  weight: FontWeight.w700,
+                  color: c.ink,
+                ).copyWith(letterSpacing: 4),
+                decoration: InputDecoration(
+                  hintText: 'Join code',
+                  counterText: '',
+                  filled: true,
+                  fillColor: c.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(11),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _busy ? null : _join,
+                style: FilledButton.styleFrom(
+                  backgroundColor: c.ink,
+                  foregroundColor: c.bg,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: _busy
+                    ? SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: c.bg,
+                        ),
+                      )
+                    : const Text('Join household'),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(_error!, style: ff(13, color: c.bad)),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FamFiConsoleBody extends StatefulWidget {
+  final JuwaStore store;
+  const FamFiConsoleBody({super.key, required this.store});
+
+  @override
+  State<FamFiConsoleBody> createState() => _ConsoleState();
+}
+
+class _ConsoleState extends State<FamFiConsoleBody> {
   static const _owners = [Owner.josh, Owner.judy];
 
   FFTab _tab = FFTab.payday;

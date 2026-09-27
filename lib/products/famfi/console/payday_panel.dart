@@ -104,16 +104,21 @@ class PaydayPanel extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 14),
-              Text.rich(
-                TextSpan(
-                  style: ff(14.5, color: c.muted),
-                  children: [
-                    const TextSpan(text: 'Bills due before the next cheque · '),
-                    TextSpan(
-                      text: ffMoney(due),
-                      style: ff(14.5, weight: FontWeight.w700, color: c.ink),
-                    ),
-                  ],
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    style: ff(14.5, color: c.muted),
+                    children: [
+                      const TextSpan(
+                        text: 'Bills due before the next cheque · ',
+                      ),
+                      TextSpan(
+                        text: ffMoney(due),
+                        style: ff(14.5, weight: FontWeight.w700, color: c.ink),
+                      ),
+                    ],
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -422,10 +427,13 @@ class _SplitAndLeft extends StatelessWidget {
               children: [
                 FFStamp(entry.key.label, color: c.muted),
                 const SizedBox(width: 8),
-                Text(
-                  "${_ownerName(entry.key)}'s cheque · covers until "
-                  '${ffDate(nextPayday[entry.key]!)}',
-                  style: ff(13.5, weight: FontWeight.w600, color: c.muted),
+                Expanded(
+                  child: Text(
+                    "${_ownerName(entry.key)}'s cheque · covers until "
+                    '${ffDate(nextPayday[entry.key]!)}',
+                    overflow: TextOverflow.ellipsis,
+                    style: ff(13.5, weight: FontWeight.w600, color: c.muted),
+                  ),
                 ),
               ],
             ),
