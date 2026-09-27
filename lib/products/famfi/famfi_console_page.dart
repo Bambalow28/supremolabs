@@ -10,6 +10,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart' show Firebase;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:juwa_wealth/models.dart';
@@ -36,8 +37,11 @@ class FamFiConsolePage extends StatefulWidget {
 }
 
 class _FamFiConsolePageState extends State<FamFiConsolePage> {
+  // Guards against a Firebase app not being registered at all (see main.dart)
+  // — the console should degrade to a message, never take the page down.
+  final bool _noBackend = Firebase.apps.isEmpty;
   late final Future<JuwaStore> _future = JuwaStore.load();
-  late final StreamSubscription<User?> _authSub;
+  StreamSubscription<User?>? _authSub;
   HouseholdSync? _sync;
   User? _user;
   String? _hid;
@@ -46,12 +50,14 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
   @override
   void initState() {
     super.initState();
-    _authSub = FirebaseAuth.instance.authStateChanges().listen(_onUser);
+    if (!_noBackend) {
+      _authSub = FirebaseAuth.instance.authStateChanges().listen(_onUser);
+    }
   }
 
   @override
   void dispose() {
-    _authSub.cancel();
+    _authSub?.cancel();
     _sync?.stop();
     super.dispose();
   }
@@ -100,6 +106,12 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
                   return const SizedBox(
                     height: 720,
                     child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (_noBackend) {
+                  return const _ConsoleMessage(
+                    text: 'The household backend is offline right now — '
+                        'check back shortly.',
                   );
                 }
                 if (_error != null) {
