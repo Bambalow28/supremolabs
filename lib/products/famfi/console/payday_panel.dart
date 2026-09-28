@@ -184,15 +184,13 @@ class PaydayPanel extends StatelessWidget {
                   children: [form, const SizedBox(height: 24), right],
                 );
               }
-              return IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(width: 340, child: form),
-                    const SizedBox(width: 24),
-                    Expanded(child: right),
-                  ],
-                ),
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: 340, child: form),
+                  const SizedBox(width: 24),
+                  Expanded(child: right),
+                ],
               );
             },
           ),
@@ -617,9 +615,13 @@ class _Group extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Text(
-                account?.name ?? 'Deleted account',
-                style: ff(15, weight: FontWeight.w700, color: c.ink),
+              Flexible(
+                child: Text(
+                  account?.name ?? 'Deleted account',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: ff(15, weight: FontWeight.w700, color: c.ink),
+                ),
               ),
               const SizedBox(width: 8),
               FFStamp(account?.owner.label ?? '', color: c.muted),
@@ -741,98 +743,117 @@ class _BillRow extends StatelessWidget {
     final sub = bill.dates.length > 1
         ? '${freqLabel(bill.bill)} · ×${bill.dates.length}'
         : freqLabel(bill.bill);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: swatch.color,
-              shape: BoxShape.circle,
+    final icon = Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(color: swatch.color, shape: BoxShape.circle),
+      child: Icon(iconFor(bill.bill.icon), size: 15, color: swatch.on),
+    );
+    final name = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          bill.bill.name,
+          style: ff(14.5, weight: FontWeight.w600, color: c.ink),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          sub,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: ff(12, color: c.muted),
+        ),
+      ],
+    );
+    final dateLabel = Text(
+      dateText,
+      style: ff(13, weight: FontWeight.w600, color: when),
+    );
+    final picker = unassigned
+        ? DPickerButton(
+            onTap: onPickAccount,
+            outline: c.warn,
+            child: Text(
+              'Choose account',
+              style: ff(13, weight: FontWeight.w600, color: c.warn),
             ),
-            child: Icon(iconFor(bill.bill.icon), size: 15, color: swatch.on),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          )
+        : DPickerButton(
+            onTap: onPickAccount,
+            child: Row(
               children: [
-                Text(
-                  bill.bill.name,
-                  style: ff(14.5, weight: FontWeight.w600, color: c.ink),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: accountColor,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
                 ),
-                Text(
-                  sub,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: ff(12, color: c.muted),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    accountName ?? '',
+                    style: ff(13, weight: FontWeight.w600, color: c.ink),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 16),
-          SizedBox(
-            width: 100,
-            child: Text(
-              dateText,
-              style: ff(13, weight: FontWeight.w600, color: when),
-            ),
-          ),
-          const SizedBox(width: 16),
-          SizedBox(
-            width: 170,
-            child: unassigned
-                ? DPickerButton(
-                    onTap: onPickAccount,
-                    outline: c.warn,
-                    child: Text(
-                      'Choose account',
-                      style: ff(13, weight: FontWeight.w600, color: c.warn),
-                    ),
-                  )
-                : DPickerButton(
-                    onTap: onPickAccount,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 9,
-                          height: 9,
-                          decoration: BoxDecoration(
-                            color: accountColor,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          child: Text(
-                            accountName ?? '',
-                            style: ff(
-                              13,
-                              weight: FontWeight.w600,
-                              color: c.ink,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-          ),
-          const SizedBox(width: 16),
-          SizedBox(
-            width: 90,
-            child: Text(
-              ffMoney(bill.subtotal),
-              textAlign: TextAlign.right,
-              style: ff(15, weight: FontWeight.w700, color: c.ink),
-            ),
-          ),
-        ],
+          );
+    final amount = Text(
+      ffMoney(bill.subtotal),
+      textAlign: TextAlign.right,
+      style: ff(15, weight: FontWeight.w700, color: c.ink),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+      // One line while there's room; with the accounts rail open the panel is
+      // narrower than the five columns need, so the amount would be cut off.
+      // Then the date and account picker drop under the name.
+      child: LayoutBuilder(
+        builder: (context, cons) {
+          if (cons.maxWidth >= 640) {
+            return Row(
+              children: [
+                icon,
+                const SizedBox(width: 14),
+                Expanded(flex: 3, child: name),
+                const SizedBox(width: 16),
+                SizedBox(width: 100, child: dateLabel),
+                const SizedBox(width: 16),
+                SizedBox(width: 170, child: picker),
+                const SizedBox(width: 16),
+                SizedBox(width: 90, child: amount),
+              ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  icon,
+                  const SizedBox(width: 14),
+                  Expanded(child: name),
+                  const SizedBox(width: 12),
+                  amount,
+                ],
+              ),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.only(left: 46),
+                child: Row(
+                  children: [
+                    SizedBox(width: 84, child: dateLabel),
+                    Expanded(child: picker),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

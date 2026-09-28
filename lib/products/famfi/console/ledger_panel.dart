@@ -8,7 +8,7 @@ import 'package:juwa_wealth/widgets.dart';
 
 import '../ff_theme.dart';
 import 'drawer.dart'
-    show TransactionDrawer, DPickerButton, categoryLabel, pickFrom;
+    show DPickerButton, categoryLabel, openTransactionDetail, pickFrom;
 
 class LedgerPanel extends StatefulWidget {
   final JuwaStore store;
@@ -278,12 +278,14 @@ class _LedgerPanelState extends State<LedgerPanel> {
             ],
           ),
           const SizedBox(height: 16),
+          // The card owns the fill, border and radius; the row inside stays
+          // transparent so it can't square off the rounded corners.
           Container(
             decoration: BoxDecoration(
+              color: c.bg,
               border: Border.all(color: c.rule),
               borderRadius: BorderRadius.circular(16),
             ),
-            clipBehavior: Clip.antiAlias,
             child: _EntryRow(
               store: widget.store,
               name: _entryName,
@@ -323,12 +325,11 @@ class _LedgerPanelState extends State<LedgerPanel> {
                 child: _TxRow(
                   store: widget.store,
                   tx: t,
-                  onTap: () => widget.openDrawer(
-                    TransactionDrawer(
-                      store: widget.store,
-                      transaction: t,
-                      onClose: widget.closeDrawer,
-                    ),
+                  onTap: () => openTransactionDetail(
+                    widget.store,
+                    t,
+                    openDrawer: widget.openDrawer,
+                    closeDrawer: widget.closeDrawer,
                   ),
                 ),
               ),
@@ -636,7 +637,6 @@ class _EntryRow extends StatelessWidget {
         // eat most of a tablet-width panel — two rows instead, same fields.
         final stacked = cons.maxWidth < 720;
         return Container(
-          color: c.bg,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: stacked
               ? Column(

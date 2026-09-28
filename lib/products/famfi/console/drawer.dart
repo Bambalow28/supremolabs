@@ -35,12 +35,16 @@ class DrawerScaffold extends StatelessWidget {
   final List<Widget> children;
   final Widget? footer;
 
+  /// Sits beside the close button — e.g. Edit on a read-only view.
+  final Widget? action;
+
   const DrawerScaffold({
     super.key,
     required this.title,
     required this.onClose,
     required this.children,
     this.footer,
+    this.action,
   });
 
   @override
@@ -63,6 +67,7 @@ class DrawerScaffold extends StatelessWidget {
                       style: ff(16, weight: FontWeight.w700, color: c.ink),
                     ),
                   ),
+                  ?action,
                   IconButton(
                     onPressed: onClose,
                     icon: Icon(Icons.close_rounded, color: c.muted),
@@ -785,39 +790,7 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
           ),
         ),
         if (widget.transaction?.receipt != null)
-          DField(
-            label: 'Receipt',
-            child: GestureDetector(
-              onTap: () => showDialog<void>(
-                context: context,
-                builder: (ctx) => FFPopIn(
-                  child: Dialog(
-                    backgroundColor: Colors.transparent,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: SizedBox(
-                        width: 480,
-                        height: 480,
-                        child: ReceiptImage(
-                          widget.store,
-                          widget.transaction!.receipt!,
-                          height: 480,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: ReceiptImage(
-                  widget.store,
-                  widget.transaction!.receipt!,
-                  height: 260,
-                ),
-              ),
-            ),
-          ),
+          receiptField(context, widget.store, widget.transaction!.receipt!),
         if (widget.transaction != null)
           OutlinedButton(
             onPressed: () => _confirm(
@@ -1221,6 +1194,352 @@ class PaydayHistoryDrawer extends StatelessWidget {
                 ],
               ),
             ),
+      ],
+    );
+  }
+}
+
+/// The receipt photo, tap to enlarge. Shared by the edit and read-only views.
+Widget receiptField(BuildContext context, JuwaStore store, String fileName) {
+  return DField(
+    label: 'Receipt',
+    child: GestureDetector(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (ctx) => FFPopIn(
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                width: 480,
+                height: 480,
+                child: ReceiptImage(store, fileName, height: 480),
+              ),
+            ),
+          ),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ReceiptImage(store, fileName, height: 260),
+      ),
+    ),
+  );
+}
+
+/// Read-only value under a label — the view-mode twin of a [DField].
+class DRead extends StatelessWidget {
+  final String label;
+  final Widget child;
+  const DRead({super.key, required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) => DField(label: label, child: child);
+}
+
+Widget _editButton(BuildContext context, VoidCallback onTap) => Padding(
+  padding: const EdgeInsets.only(right: 4),
+  child: FilledButton.tonalIcon(
+    onPressed: onTap,
+    icon: const Icon(Icons.edit_rounded, size: 16),
+    label: const Text('Edit'),
+  ),
+);
+
+/// Opens [t] read-only; its Edit button swaps in the form.
+void openTransactionDetail(
+  JuwaStore store,
+  Transaction t, {
+  required void Function(Widget drawer) openDrawer,
+  required VoidCallback closeDrawer,
+}) => openDrawer(
+  TransactionDetailDrawer(
+    store: store,
+    transaction: t,
+    onClose: closeDrawer,
+    onEdit: () => openDrawer(
+      TransactionDrawer(store: store, transaction: t, onClose: closeDrawer),
+    ),
+  ),
+);
+
+/// Opens [b] with every transaction in its category; Edit swaps in the form.
+void openBudgetDetail(
+  JuwaStore store,
+  Budget b, {
+  required void Function(Widget drawer) openDrawer,
+  required VoidCallback closeDrawer,
+}) => openDrawer(
+  BudgetDetailDrawer(
+    store: store,
+    budget: b,
+    onClose: closeDrawer,
+    openDrawer: openDrawer,
+    onEdit: () =>
+        openDrawer(BudgetDrawer(store: store, budget: b, onClose: closeDrawer)),
+  ),
+);
+
+// ------------------------------------------------- transaction (read-only)
+
+class TransactionDetailDrawer extends StatelessWidget {
+  final JuwaStore store;
+  final Transaction transaction;
+  final VoidCallback onClose;
+  final VoidCallback onEdit;
+  const TransactionDetailDrawer({
+    super.key,
+    required this.store,
+    required this.transaction,
+    required this.onClose,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final tx = transaction;
+    final account = store.accounts
+        .where((a) => a.id == tx.accountId)
+        .firstOrNull;
+    final swatch = swatchFor(account?.color ?? 'graphite');
+    final received = tx.amount > 0;
+    return DrawerScaffold(
+      title: 'Transaction',
+      onClose: onClose,
+      action: _editButton(context, onEdit),
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              tx.name,
+              style: ff(20, weight: FontWeight.w700, color: c.ink),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              ffAmount(tx.amount),
+              style: ff(
+                34,
+                weight: FontWeight.w800,
+                color: received ? c.good : c.bad,
+              ),
+            ),
+            Text(
+              received ? 'Received' : 'Spent',
+              style: ff(13, color: c.muted),
+            ),
+          ],
+        ),
+        DRead(
+          label: 'Account',
+          child: Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: swatch.color,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                account?.name ?? 'Deleted account',
+                style: ff(15, color: c.ink),
+              ),
+            ],
+          ),
+        ),
+        DRead(
+          label: 'Date',
+          child: Text(ffDate(tx.date), style: ff(15, color: c.ink)),
+        ),
+        DRead(
+          label: 'Category',
+          child: Text(
+            categoryLabel(store, tx.categoryId),
+            style: ff(15, color: c.ink),
+          ),
+        ),
+        DRead(
+          label: 'Added by',
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FFStamp(tx.by.label, color: c.muted),
+          ),
+        ),
+        if (tx.billId != null || tx.paydayId != null)
+          Text(
+            tx.billId != null
+                ? 'Written automatically when the bill was paid.'
+                : 'Written automatically by a payday.',
+            style: ff(12.5, color: c.muted),
+          ),
+        if (tx.note != null && tx.note!.isNotEmpty)
+          DRead(
+            label: 'Note',
+            child: Text(tx.note!, style: ff(14, color: c.ink)),
+          ),
+        if (tx.link != null)
+          DRead(
+            label: 'Order link',
+            child: GestureDetector(
+              onTap: () => launchUrl(
+                Uri.parse(_normalizedLink(tx.link!)),
+                webOnlyWindowName: '_blank',
+              ),
+              child: Text(
+                tx.link!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: ff(
+                  14,
+                  color: FFColors.accentInk,
+                  weight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        if (tx.receipt != null) receiptField(context, store, tx.receipt!),
+      ],
+    );
+  }
+}
+
+// ------------------------------------------------------- budget (detail)
+
+class BudgetDetailDrawer extends StatelessWidget {
+  final JuwaStore store;
+  final Budget budget;
+  final VoidCallback onClose;
+  final VoidCallback onEdit;
+  final void Function(Widget drawer) openDrawer;
+  const BudgetDetailDrawer({
+    super.key,
+    required this.store,
+    required this.budget,
+    required this.onClose,
+    required this.onEdit,
+    required this.openDrawer,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    // Read live: the drawer outlives edits, so pick the current copy.
+    final b =
+        store.budgets.where((x) => x.id == budget.id).firstOrNull ?? budget;
+    final spent = store.spentNow(b);
+    final left = store.budgetRemaining(b);
+    final manual = store.manualSpentNow(b);
+    final txs = store.transactions.where((t) => t.categoryId == b.id).toList()
+      ..sort((x, y) => y.date.compareTo(x.date));
+    return DrawerScaffold(
+      title: b.name,
+      onClose: onClose,
+      action: _editButton(context, onEdit),
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text.rich(
+              TextSpan(
+                style: ff(15, color: c.muted),
+                children: [
+                  TextSpan(
+                    text: ffAmount(spent),
+                    style: ff(30, weight: FontWeight.w800, color: c.ink),
+                  ),
+                  TextSpan(
+                    text: '  of ${ffAmount(b.monthlyTarget)} this month',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            BudgetBar(spent: spent, target: b.monthlyTarget, color: c.tint),
+            const SizedBox(height: 10),
+            Text(
+              left < 0 ? '${ffAmount(left)} over' : '${ffAmount(left)} left',
+              style: ff(
+                13.5,
+                weight: FontWeight.w600,
+                color: left < 0 ? c.bad : c.muted,
+              ),
+            ),
+            if (manual > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Includes ${ffAmount(manual)} entered by hand.',
+                  style: ff(12.5, color: c.faint),
+                ),
+              ),
+          ],
+        ),
+        DRead(
+          label: 'Transactions · ${txs.length}',
+          child: txs.isEmpty
+              ? Text(
+                  'Nothing filed under ${b.name} yet.',
+                  style: ff(13.5, color: c.muted),
+                )
+              : Column(
+                  children: [
+                    for (final t in txs)
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => openTransactionDetail(
+                          store,
+                          t,
+                          openDrawer: openDrawer,
+                          closeDrawer: onClose,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 4,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      t.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: ff(
+                                        14.5,
+                                        weight: FontWeight.w600,
+                                        color: c.ink,
+                                      ),
+                                    ),
+                                    Text(
+                                      ffDate(t.date),
+                                      style: ff(12, color: c.muted),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                ffAmount(t.amount),
+                                style: ff(
+                                  14.5,
+                                  weight: FontWeight.w700,
+                                  color: t.amount > 0 ? c.good : c.bad,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+        ),
       ],
     );
   }

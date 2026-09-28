@@ -536,12 +536,12 @@ class _ConsoleState extends State<FamFiConsoleBody> {
       uri: Uri(path: '/famfi/personal', queryParameters: {'tab': t.name}),
       replace: true,
     );
-    _reload(() => widget.store.reload(), 380);
+    _reload(() => widget.store.reload(), 550);
   }
 
   /// The refresh button: a full re-sync with the household, not just a
   /// re-read of what's on this browser.
-  void _refreshAll() => _reload(widget.onRefresh, 650);
+  void _refreshAll() => _reload(widget.onRefresh, 900);
 
   Future<void> _reload(Future<void> Function() load, int minMs) async {
     final seq = ++_reloadSeq;

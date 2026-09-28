@@ -39,6 +39,8 @@ class _BudgetPanelState extends State<BudgetPanel> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
                 'Budget',
@@ -98,12 +100,11 @@ class _BudgetPanelState extends State<BudgetPanel> {
           const SizedBox(height: 20),
           _Table(
             store: store,
-            onOpen: (b) => widget.openDrawer(
-              BudgetDrawer(
-                store: store,
-                budget: b,
-                onClose: widget.closeDrawer,
-              ),
+            onOpen: (b) => openBudgetDetail(
+              store,
+              b,
+              openDrawer: widget.openDrawer,
+              closeDrawer: widget.closeDrawer,
             ),
             onAddNew: () => widget.openDrawer(
               BudgetDrawer(store: store, onClose: widget.closeDrawer),

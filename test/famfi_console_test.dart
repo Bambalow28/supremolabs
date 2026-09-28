@@ -12,8 +12,14 @@ import 'package:supremolabs/products/famfi/famfi_console_page.dart';
 // page gates on Firebase Auth + household join (no Firebase in widget
 // tests), same as juwa_wealth's own widget_test.dart tests Shell directly
 // rather than going through AuthGate.
-Future<Widget> _console() async =>
-    MaterialApp(home: Scaffold(body: FamFiConsoleBody(store: await JuwaStore.load(), onRefresh: () async {})));
+Future<Widget> _console() async => MaterialApp(
+  home: Scaffold(
+    body: FamFiConsoleBody(
+      store: await JuwaStore.load(),
+      onRefresh: () async {},
+    ),
+  ),
+);
 
 String d(String s) => '${s}T00:00:00.000';
 // Minimal household: enough to fill every tab's table/calendar.
@@ -236,5 +242,49 @@ void main() {
     expect(find.text('Josh left'), findsOneWidget);
     expect(find.text('Judy left'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a transaction opens read-only; Edit swaps in the form', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({
+      'juwa_wealth_v3': jsonEncode(seed),
+    });
+    await tester.pumpWidget(await _console());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Transactions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Loblaws'));
+    await tester.pumpAndSettle();
+    expect(find.text('Transaction'), findsOneWidget);
+    expect(find.text('Edit transaction'), findsNothing);
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit transaction'), findsOneWidget);
+  });
+
+  testWidgets('a budget lists its transactions; Edit swaps in the form', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({
+      'juwa_wealth_v3': jsonEncode(seed),
+    });
+    await tester.pumpWidget(await _console());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Budget'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Groceries'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Transactions · 1'), findsOneWidget);
+    expect(find.text('Loblaws'), findsOneWidget);
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit budget'), findsOneWidget);
   });
 }
