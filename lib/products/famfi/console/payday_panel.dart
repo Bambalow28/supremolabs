@@ -67,6 +67,7 @@ class PaydayPanel extends StatelessWidget {
       initialDate: initial,
       firstDate: today,
       lastDate: DateTime(today.year + 2),
+      builder: (_, child) => FFPopIn(child: child!),
     );
     if (d != null) onPicked(DateTime(d.year, d.month, d.day));
   }
@@ -478,64 +479,76 @@ class _SplitAndLeft extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: c.rule),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          // Totals and the action share the top line; what the save will
+          // write gets the full width below instead of a squeezed 3-line
+          // column between them.
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final o in _owners) ...[
-                if (o != _owners.first) const SizedBox(width: 16),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${_ownerName(o)} left',
-                        style: ff(12, color: c.muted),
-                      ),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          ffMoney(splits[o]?.left ?? 0),
-                          style: ff(
-                            20,
-                            weight: FontWeight.w800,
-                            color: (splits[o]?.left ?? 0) < 0 ? c.bad : c.good,
-                            spacing: -0.6,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        for (final o in _owners) ...[
+                          if (o != _owners.first) const SizedBox(width: 24),
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${_ownerName(o)} left',
+                                  style: ff(12, color: c.muted),
+                                ),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    ffMoney(splits[o]?.left ?? 0),
+                                    style: ff(
+                                      20,
+                                      weight: FontWeight.w800,
+                                      color: (splits[o]?.left ?? 0) < 0
+                                          ? c.bad
+                                          : c.good,
+                                      spacing: -0.6,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  FilledButton(
+                    onPressed: canSave ? onSave : null,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: c.ink,
+                      foregroundColor: c.bg,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 14,
                       ),
-                    ],
+                    ),
+                    child: const Text('Save payday ⌘↵'),
                   ),
-                ),
-              ],
-              const SizedBox(width: 16),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.only(left: 20),
-                  decoration: BoxDecoration(
-                    border: Border(left: BorderSide(color: c.rule)),
-                  ),
-                  child: Text(
-                    _writeSummary(),
-                    style: ff(12.5, color: c.muted, height: 1.4),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+                ],
               ),
-              const SizedBox(width: 16),
-              FilledButton(
-                onPressed: canSave ? onSave : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: c.ink,
-                  foregroundColor: c.bg,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 14,
-                  ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: c.rule)),
                 ),
-                child: const Text('Save payday ⌘↵'),
+                child: Text(
+                  _writeSummary(),
+                  style: ff(12.5, color: c.muted, height: 1.45),
+                ),
               ),
             ],
           ),

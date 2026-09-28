@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
 import 'package:juwa_wealth/ui/bills/bills_screen.dart' show freqLabel;
+import 'package:juwa_wealth/widgets.dart' show Reveal;
 
 import '../ff_theme.dart';
 import 'drawer.dart';
@@ -452,14 +453,17 @@ class _Lists extends StatelessWidget {
                 )
               : Column(
                   children: [
-                    for (final (bill, date) in before)
-                      _Row(
-                        store: store,
-                        bill: bill,
-                        date: date,
-                        today: today,
-                        onMarkPaid: onMarkPaid,
-                        onOpen: onOpen,
+                    for (final (i, (bill, date)) in before.indexed)
+                      Reveal(
+                        index: i,
+                        child: _Row(
+                          store: store,
+                          bill: bill,
+                          date: date,
+                          today: today,
+                          onMarkPaid: onMarkPaid,
+                          onOpen: onOpen,
+                        ),
                       ),
                   ],
                 ),
@@ -485,14 +489,17 @@ class _Lists extends StatelessWidget {
                 )
               : Column(
                   children: [
-                    for (final (bill, date) in later)
-                      _Row(
-                        store: store,
-                        bill: bill,
-                        date: date,
-                        today: today,
-                        onMarkPaid: onMarkPaid,
-                        onOpen: onOpen,
+                    for (final (i, (bill, date)) in later.indexed)
+                      Reveal(
+                        index: before.length + i,
+                        child: _Row(
+                          store: store,
+                          bill: bill,
+                          date: date,
+                          today: today,
+                          onMarkPaid: onMarkPaid,
+                          onOpen: onOpen,
+                        ),
                       ),
                   ],
                 ),

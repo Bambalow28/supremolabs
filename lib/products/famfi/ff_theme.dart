@@ -31,6 +31,44 @@ ThemeData famFiTheme(Brightness b) {
   return base.copyWith(textTheme: GoogleFonts.interTextTheme(base.textTheme));
 }
 
+/// Text fields sitting on a `c.surface` card or drawer. The app's input theme
+/// fills with `c.surface` too, which makes a field vanish there — lift it one
+/// step to `c.fill`, the same well DPickerButton uses beside it.
+Widget ffRaisedFields(BuildContext context, Widget child) {
+  final theme = Theme.of(context);
+  return Theme(
+    data: theme.copyWith(
+      inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+        fillColor: context.c.fill,
+        contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      ),
+    ),
+    child: child,
+  );
+}
+
+/// Dialog entrance: fades and settles from 96% scale over the route's own
+/// fade, the way the app's popovers arrive. Wrap a dialog's builder output.
+class FFPopIn extends StatelessWidget {
+  final Widget child;
+  const FFPopIn({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.of(context).disableAnimations) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, c) => Opacity(
+        opacity: t,
+        child: Transform.scale(scale: 0.96 + 0.04 * t, child: c),
+      ),
+      child: child,
+    );
+  }
+}
+
 /// Inter with tabular figures — every FamFi label and number on the web.
 TextStyle ff(
   double size, {

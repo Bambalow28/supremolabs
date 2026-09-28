@@ -17,7 +17,9 @@ import 'package:flutter/services.dart';
 import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
 import 'package:juwa_wealth/sync.dart';
-import 'package:juwa_wealth/widgets.dart' show AmountField, SegmentedTabs;
+import 'package:juwa_wealth/ui/common.dart' show SkeletonListCard;
+import 'package:juwa_wealth/widgets.dart'
+    show AmountField, SegmentedTabs, SkeletonBox;
 
 import '../../app/site_shell.dart';
 import 'console/bills_panel.dart';
@@ -92,8 +94,15 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
 
   Future<void> _connect(JuwaStore store, String hid, Owner owner) async {
     store.me = owner;
+    // Skeleton until the household's first full snapshot lands — local
+    // prefs may be empty or another household's stale copy.
+    store.setLoading(true);
     _sync = HouseholdSync(store, hid);
     await _sync!.start(importLocal: false);
+    // ponytail: a failed first snapshot only debugPrints in HouseholdSync, so
+    // fall back to local data after 10s rather than skeleton forever; surface
+    // the listen error itself if that ever needs a message.
+    Future.delayed(const Duration(seconds: 10), () => store.setLoading(false));
     if (mounted) setState(() => _hid = hid);
   }
 
@@ -111,47 +120,151 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
               data: famFiTheme(MediaQuery.platformBrightnessOf(context)),
               child: FutureBuilder<JuwaStore>(
                 future: _future,
-                builder: (context, snap) {
-                  final store = snap.data;
-                  if (store == null) {
-                    return const SizedBox(
-                      height: 720,
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  if (_noBackend) {
-                    return const _ConsoleMessage(
-                      text:
-                          'The household backend is offline right now — '
-                          'check back shortly.',
-                    );
-                  }
-                  if (_error != null) {
-                    return _ConsoleMessage(
-                      text:
-                          "Couldn't reach your household. "
-                          'Check your connection and reload.',
-                    );
-                  }
-                  if (_user == null || _hid == null) {
-                    return _user == null
-                        ? const SizedBox(
-                            height: 720,
-                            child: Center(child: CircularProgressIndicator()),
-                          )
-                        : _JoinCard(
-                            uid: _user!.uid,
-                            onJoined: (hid, owner) =>
-                                _connect(store, hid, owner),
-                          );
-                  }
-                  return FamFiConsoleBody(store: store);
-                },
+                builder: (context, snap) => AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  child: _state(snap.data),
+                ),
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  /// One keyed widget per console state, so the switcher above crossfades
+  /// skeleton → join card → console instead of cutting between them.
+  Widget _state(JuwaStore? store) {
+    if (store == null) return const _ConsoleSkeleton(key: ValueKey('skel'));
+    return KeyedSubtree(
+      key: ValueKey(
+        _noBackend || _error != null
+            ? 'msg'
+            : _user == null
+            ? 'skel'
+            : _hid == null
+            ? 'join'
+            : 'console',
+      ),
+      child: Builder(
+        builder: (context) {
+          if (_noBackend) {
+            return const _ConsoleMessage(
+              text:
+                  'The household backend is offline right now — '
+                  'check back shortly.',
+            );
+          }
+          if (_error != null) {
+            return _ConsoleMessage(
+              text:
+                  "Couldn't reach your household. "
+                  'Check your connection and reload.',
+            );
+          }
+          if (_user == null || _hid == null) {
+            return _user == null
+                ? const _ConsoleSkeleton()
+                : _JoinCard(
+                    uid: _user!.uid,
+                    onJoined: (hid, owner) => _connect(store, hid, owner),
+                  );
+          }
+          // The body rebuilds on the store, so it flips from its
+          // own skeleton to the real console when the snapshot lands.
+          return ListenableBuilder(
+            listenable: store,
+            builder: (context, _) => AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: store.loading
+                  ? const _ConsoleSkeleton(key: ValueKey('loading'))
+                  : FamFiConsoleBody(key: const ValueKey('body'), store: store),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+double _consoleHeight(BuildContext context) =>
+    (MediaQuery.sizeOf(context).height - 100).clamp(720, double.infinity);
+
+/// The console's own shape while the household loads: wallet cards down the
+/// left, the tab strip, a title and a list — so the first frame already reads
+/// as the console rather than a spinner, as the phone's tab skeletons do.
+class _ConsoleSkeleton extends StatelessWidget {
+  const _ConsoleSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final list = Padding(
+      padding: const EdgeInsets.fromLTRB(40, 24, 40, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              for (var i = 0; i < 4; i++) ...[
+                const SkeletonBox(width: 78, height: 32),
+                const SizedBox(width: 8),
+              ],
+            ],
+          ),
+          const SizedBox(height: 32),
+          const SkeletonBox(width: 180, height: 34),
+          const SizedBox(height: 28),
+          const SkeletonListCard(rows: 6),
+        ],
+      ),
+    );
+    return SizedBox(
+      height: _consoleHeight(context),
+      child: ColoredBox(
+        color: c.bg,
+        child: LayoutBuilder(
+          builder: (context, cons) {
+            if (cons.maxWidth < 900) return list;
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 344,
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
+                  decoration: BoxDecoration(
+                    border: Border(right: BorderSide(color: c.rule)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SkeletonBox(width: 80, height: 12),
+                      const SizedBox(height: 10),
+                      const SkeletonBox(width: 190, height: 30),
+                      const SizedBox(height: 22),
+                      const SkeletonBox(width: double.infinity, height: 36),
+                      const SizedBox(height: 18),
+                      for (var i = 0; i < 3; i++) ...[
+                        const SkeletonBox(
+                          width: double.infinity,
+                          height: 88,
+                          borderRadius: BorderRadius.all(Radius.circular(14)),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ],
+                  ),
+                ),
+                Expanded(child: list),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -315,6 +428,13 @@ class _ConsoleState extends State<FamFiConsoleBody> {
   Owner? _ownerFilter;
   String? _selectedAccountId;
   Widget? _drawerChild;
+  // Separate from _drawerChild so a closing drawer keeps its form on screen
+  // while it slides away, instead of emptying first.
+  bool _drawerOpen = false;
+  // Last tab drawn and which way the strip moved to leave it, so the next
+  // panel slides in from the side its tab sits on.
+  FFTab _shownTab = FFTab.payday;
+  int _tabDir = 1;
 
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
@@ -414,9 +534,10 @@ class _ConsoleState extends State<FamFiConsoleBody> {
 
   // Keyed so opening item B over item A's drawer builds fresh form state
   // instead of reusing A's controllers (and saving A's values onto B).
-  void openDrawer(Widget child) => setState(
-    () => _drawerChild = KeyedSubtree(key: UniqueKey(), child: child),
-  );
+  void openDrawer(Widget child) => setState(() {
+    _drawerChild = KeyedSubtree(key: UniqueKey(), child: child);
+    _drawerOpen = true;
+  });
 
   /// [owner]'s picked deposit account, or their own default if it was since
   /// deleted or never picked.
@@ -435,7 +556,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
       AmountField.parse(_amounts[owner]!.text) ?? 0;
 
   void closeDrawer() => setState(() {
-    _drawerChild = null;
+    _drawerOpen = false;
     _selectedAccountId = null;
   });
 
@@ -528,9 +649,6 @@ class _ConsoleState extends State<FamFiConsoleBody> {
     return m;
   }
 
-  double _consoleHeight(BuildContext context) =>
-      (MediaQuery.sizeOf(context).height - 100).clamp(720, double.infinity);
-
   void _onOpenBillFromNotification(Bill bill) {
     setState(() => _tab = FFTab.bills);
     openDrawer(
@@ -579,12 +697,8 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                     child: LayoutBuilder(
                       builder: (context, cons) {
                         final compact = cons.maxWidth < 900;
-                        final panel = _panel(
-                          store,
-                          splits,
-                          into,
-                          nextPaydays,
-                          today,
+                        final panel = _tabSwitch(
+                          _panel(store, splits, into, nextPaydays, today),
                         );
                         // Wide: the wallet runs the full height on the left and
                         // the tabs sit over the task, as in the approved mockup.
@@ -671,11 +785,20 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                               curve: Curves.easeOutQuart,
                               top: 0,
                               bottom: 0,
-                              right: _drawerChild == null ? -460 : 0,
+                              right: _drawerOpen ? 0 : -460,
                               width: 440,
                               child: Material(
                                 elevation: 12,
-                                child: _drawerChild ?? const SizedBox(),
+                                // Offscreen form stays out of tab order.
+                                child: ExcludeFocus(
+                                  excluding: !_drawerOpen,
+                                  // Item B over item A: A's form fades out
+                                  // under B's rather than cutting.
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 220),
+                                    child: _drawerChild ?? const SizedBox(),
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -696,6 +819,38 @@ class _ConsoleState extends State<FamFiConsoleBody> {
     setState(() => _selectedAccountId = a.id);
     openDrawer(
       AccountDrawer(store: widget.store, account: a, onClose: closeDrawer),
+    );
+  }
+
+  /// Tab change: the new panel fades in from the side of its tab (24px,
+  /// easeOutCubic) — the phone's paged tabs, kept short for a desk tool. The
+  /// old panel leaves at once rather than overlapping: two PaydayPanels
+  /// alive together would share the same amount FocusNodes.
+  Widget _tabSwitch(Widget panel) {
+    if (_tab != _shownTab) {
+      _tabDir = _tab.index > _shownTab.index ? 1 : -1;
+      _shownTab = _tab;
+    }
+    final reduce = MediaQuery.of(context).disableAnimations;
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 280),
+      switchInCurve: Curves.easeOutCubic,
+      layoutBuilder: (current, _) => current ?? const SizedBox(),
+      transitionBuilder: (child, animation) {
+        final dx = reduce ? 0.0 : 24.0 * _tabDir;
+        return FadeTransition(
+          opacity: animation,
+          child: AnimatedBuilder(
+            animation: animation,
+            builder: (context, c) => Transform.translate(
+              offset: Offset(dx * (1 - animation.value), 0),
+              child: c,
+            ),
+            child: child,
+          ),
+        );
+      },
+      child: KeyedSubtree(key: ValueKey(_tab), child: panel),
     );
   }
 

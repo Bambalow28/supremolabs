@@ -24,7 +24,9 @@ String categoryLabel(JuwaStore store, String? categoryId) {
   return category?.name ?? 'None';
 }
 
-/// Common drawer chrome: title + close, 28px padding, 20px between fields.
+/// Common drawer chrome: title + close, 28px padding, 20px between fields,
+/// fields staggering in as the drawer arrives, and a full-width footer
+/// action ruled off from the scrolling form above it.
 class DrawerScaffold extends StatelessWidget {
   final String title;
   final VoidCallback onClose;
@@ -42,48 +44,55 @@ class DrawerScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Container(
-      width: 440,
-      color: c.surface,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 22, 20, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: ff(16, weight: FontWeight.w700, color: c.ink),
-                  ),
-                ),
-                IconButton(
-                  onPressed: onClose,
-                  icon: Icon(Icons.close_rounded, color: c.muted),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(28, 8, 28, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+    return ffRaisedFields(
+      context,
+      Container(
+        width: 440,
+        color: c.surface,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 22, 20, 8),
+              child: Row(
                 children: [
-                  for (var i = 0; i < children.length; i++) ...[
-                    if (i > 0) const SizedBox(height: 20),
-                    children[i],
-                  ],
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: ff(16, weight: FontWeight.w700, color: c.ink),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: onClose,
+                    icon: Icon(Icons.close_rounded, color: c.muted),
+                  ),
                 ],
               ),
             ),
-          ),
-          if (footer != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
-              child: footer,
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(28, 8, 28, 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < children.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 20),
+                      Reveal(index: i, slide: 10, child: children[i]),
+                    ],
+                  ],
+                ),
+              ),
             ),
-        ],
+            if (footer != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(28, 16, 28, 24),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: c.rule)),
+                ),
+                child: footer,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -160,19 +169,21 @@ Future<T?> pickFrom<T>(
 }) {
   return showDialog<T>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(title),
-      content: SizedBox(
-        width: 320,
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            for (final item in items)
-              ListTile(
-                title: Text(item.$1),
-                onTap: () => Navigator.pop(ctx, item.$2),
-              ),
-          ],
+    builder: (ctx) => FFPopIn(
+      child: AlertDialog(
+        title: Text(title),
+        content: SizedBox(
+          width: 320,
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              for (final item in items)
+                ListTile(
+                  title: Text(item.$1),
+                  onTap: () => Navigator.pop(ctx, item.$2),
+                ),
+            ],
+          ),
         ),
       ),
     ),
@@ -187,19 +198,21 @@ Future<void> _confirm(
 }) async {
   final ok = await showDialog<bool>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(title),
-      content: Text(body),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Delete'),
-        ),
-      ],
+    builder: (ctx) => FFPopIn(
+      child: AlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     ),
   );
   if (ok == true) onConfirm();
@@ -569,6 +582,7 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
       initialDate: _date,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      builder: (_, child) => FFPopIn(child: child!),
     );
     if (d != null) setState(() => _date = DateTime(d.year, d.month, d.day));
   }
@@ -633,12 +647,17 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
           label: 'Amount',
           child: Row(
             children: [
-              SegmentedTabs(
-                labels: const ['−', '+'],
-                selected: _received ? 1 : 0,
-                onChanged: (i) => setState(() => _received = i == 1),
+              // SegmentedTabs stretches its segments to the width it gets;
+              // unsized in a Row that's none, which crushed both to a sliver.
+              SizedBox(
+                width: 96,
+                child: SegmentedTabs(
+                  labels: const ['−', '+'],
+                  selected: _received ? 1 : 0,
+                  onChanged: (i) => setState(() => _received = i == 1),
+                ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: AmountField(
                   controller: _amount,
@@ -771,6 +790,7 @@ class _BillDrawerState extends State<BillDrawer> {
       initialDate: _firstDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      builder: (_, child) => FFPopIn(child: child!),
     );
     if (d != null) {
       setState(() => _firstDate = DateTime(d.year, d.month, d.day));

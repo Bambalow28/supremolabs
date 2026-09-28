@@ -226,8 +226,15 @@ class _Table extends StatelessWidget {
                 ],
               ),
             ),
-          for (final b in store.budgets)
-            _BudgetRow(store: store, budget: b, onTap: () => onOpen(b)),
+          for (final (i, b) in store.budgets.indexed)
+            Reveal(
+              index: i,
+              child: _BudgetRow(
+                store: store,
+                budget: b,
+                onTap: () => onOpen(b),
+              ),
+            ),
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -380,10 +387,13 @@ class _Afford extends StatelessWidget {
             style: ff(17, weight: FontWeight.w800, color: c.ink, spacing: -0.3),
           ),
           const SizedBox(height: 14),
-          AmountField(
-            controller: controller,
-            fontSize: 22,
-            onChanged: (_) => onChanged(),
+          ffRaisedFields(
+            context,
+            AmountField(
+              controller: controller,
+              fontSize: 22,
+              onChanged: (_) => onChanged(),
+            ),
           ),
           if (result != null) ...[
             const SizedBox(height: 14),

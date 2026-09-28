@@ -270,11 +270,7 @@ class _LedgerPanelState extends State<LedgerPanel> {
                       const TextSpan(text: 'In '),
                       TextSpan(
                         text: ffMoney(totalIn, sign: true),
-                        style: ff(
-                          13.5,
-                          weight: FontWeight.w700,
-                          color: c.good,
-                        ),
+                        style: ff(13.5, weight: FontWeight.w700, color: c.good),
                       ),
                       const TextSpan(text: ' · Out '),
                       TextSpan(
@@ -323,20 +319,27 @@ class _LedgerPanelState extends State<LedgerPanel> {
                     ),
                   )
                 else
-                  for (final day in days) ...[
-                    _DayHeader(
-                      day: day,
-                      net: byDay[day]!.fold(0.0, (s, t) => s + t.amount),
+                  // Each day arrives as one beat, top day first.
+                  for (final (di, day) in days.indexed) ...[
+                    Reveal(
+                      index: di,
+                      child: _DayHeader(
+                        day: day,
+                        net: byDay[day]!.fold(0.0, (s, t) => s + t.amount),
+                      ),
                     ),
                     for (final t in byDay[day]!)
-                      _TxRow(
-                        store: widget.store,
-                        tx: t,
-                        onTap: () => widget.openDrawer(
-                          TransactionDrawer(
-                            store: widget.store,
-                            transaction: t,
-                            onClose: widget.closeDrawer,
+                      Reveal(
+                        index: di,
+                        child: _TxRow(
+                          store: widget.store,
+                          tx: t,
+                          onTap: () => widget.openDrawer(
+                            TransactionDrawer(
+                              store: widget.store,
+                              transaction: t,
+                              onClose: widget.closeDrawer,
+                            ),
                           ),
                         ),
                       ),
@@ -541,6 +544,7 @@ class _EntryRow extends StatelessWidget {
             initialDate: date,
             firstDate: DateTime(2000),
             lastDate: DateTime(2100),
+            builder: (_, child) => FFPopIn(child: child!),
           );
           if (d != null) onDateChanged(DateTime(d.year, d.month, d.day));
         },
