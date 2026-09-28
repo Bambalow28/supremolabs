@@ -7,6 +7,7 @@ import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
 import 'package:juwa_wealth/ui/bills/bills_screen.dart' show freqLabel;
 import 'package:juwa_wealth/widgets.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../ff_theme.dart';
 
@@ -509,6 +510,11 @@ class _AccountDrawerState extends State<AccountDrawer> {
   }
 }
 
+/// Order links are saved as free text (no forced scheme) — prefix `https://`
+/// when one's missing, same normalization the app applies on open.
+String _normalizedLink(String url) =>
+    RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*://').hasMatch(url) ? url : 'https://$url';
+
 // ------------------------------------------------------------ transaction
 
 class TransactionDrawer extends StatefulWidget {
@@ -606,6 +612,7 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
       by: _by,
       note: widget.transaction?.note,
       receipt: widget.transaction?.receipt,
+      link: widget.transaction?.link,
     );
     if (_editing) {
       await store.updateTransaction(tx);
@@ -731,6 +738,26 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
           DField(
             label: 'Scanned items',
             child: Text(widget.transaction!.note!, style: ff(13.5, color: c.ink)),
+          ),
+        if (widget.transaction?.link != null)
+          DField(
+            label: 'Order link',
+            child: GestureDetector(
+              onTap: () => launchUrl(
+                Uri.parse(_normalizedLink(widget.transaction!.link!)),
+                webOnlyWindowName: '_blank',
+              ),
+              child: Text(
+                widget.transaction!.link!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: ff(
+                  13.5,
+                  color: FFColors.accentInk,
+                  weight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         if (widget.transaction?.receipt != null)
           DField(
