@@ -2,7 +2,7 @@
   "hosting": {
     "public": "build/web",
     "predeploy": [
-      "flutter build web --release",
+      "flutter build web --release --no-tree-shake-icons",
       "perl -pi -e \"s/__BUILD__/time/e\" build/web/index.html"
     ],
     "ignore": [
@@ -17,6 +17,15 @@
       }
     ],
     "headers": [
+      {
+        "source": "**/assets/fonts/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
       {
         "source": "**/@(index.html|main.dart.js|flutter_bootstrap.js|flutter.js|flutter_service_worker.js|version.json|!(*.*))",
         "headers": [

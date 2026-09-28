@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:juwa_wealth/store.dart';
 // ignore: depend_on_referenced_packages
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supremolabs/products/famfi/console/csv_export.dart';
 import 'package:supremolabs/products/famfi/famfi_console_page.dart';
 
 // These tests exercise FamFiConsoleBody directly, not FamFiConsolePage — the
@@ -287,4 +288,85 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Edit budget'), findsOneWidget);
   });
+
+  testWidgets('Filters narrow the ledger; Export opens', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({
+      'juwa_wealth_v3': jsonEncode(seed),
+    });
+    await tester.pumpWidget(await _console());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Transactions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Loblaws'), findsOneWidget);
+    await tester.tap(find.text('Filters'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Visa Infinite'));
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+    // Loblaws is on Judy's account, so the Visa filter drops it.
+    expect(find.text('Loblaws'), findsNothing);
+    await tester.tap(find.text('Export'));
+    await tester.pumpAndSettle();
+    expect(find.text('Export statement'), findsOneWidget);
+  });
+
+  test(
+    'statement CSV is oldest-first, quoted, signed and CRLF-separated',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'juwa_wealth_v3': jsonEncode({
+          ...seed,
+          'transactions': [
+            {
+              'id': 'a',
+              'accountId': 'uc',
+              'amount': -142.3,
+              'date': d('2026-09-24'),
+              'name': 'Loblaws, "Queen St"',
+              'categoryId': 'g1',
+              'billId': null,
+              'paydayId': null,
+              'by': 'judy',
+              'note': 'milk\neggs',
+              'receipt': 'a.jpg',
+              'link': null,
+            },
+            {
+              'id': 'b',
+              'accountId': 'jc',
+              'amount': 2400,
+              'date': d('2026-09-01'),
+              'name': 'Pay',
+              'categoryId': null,
+              'billId': null,
+              'paydayId': 'p',
+              'by': 'josh',
+              'note': null,
+              'receipt': null,
+            },
+          ],
+        }),
+      });
+      final store = await JuwaStore.load();
+      final lines = transactionsCsv(store, store.transactions).split('\r\n');
+      expect(
+        lines.first,
+        startsWith('Date,Description,Account,Category,Type,Amount'),
+      );
+      expect(
+        lines[1],
+        '2026-09-01,Pay,Josh Chequing,,Received,2400.00,JOSH,Payday,,,',
+      );
+      // Quoted name, and a note whose line break stays inside its quotes.
+      expect(
+        lines[2],
+        '2026-09-24,"Loblaws, ""Queen St""",Judy Chequing,Groceries,Spent,'
+        '-142.30,JUDY,Manual,"milk\neggs",,Yes',
+      );
+      expect(lines, hasLength(3));
+    },
+  );
 }

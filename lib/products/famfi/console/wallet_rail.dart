@@ -44,7 +44,7 @@ class WalletRail extends StatelessWidget {
     this.compact = false,
   });
 
-  static const _owners = [null, Owner.josh, Owner.judy, Owner.joint];
+  List<Owner?> get _owners => [null, ...Owner.all];
   static const _wide = 344.0;
   static const _slim = 64.0;
   static const _fold = Duration(milliseconds: 280);
@@ -107,7 +107,7 @@ class WalletRail extends StatelessWidget {
                   ),
                 const SizedBox(height: 14),
                 SegmentedTabs(
-                  labels: const ['All', 'Josh', 'Judy', 'Joint'],
+                  labels: ['All', for (final o in Owner.all) o.title],
                   selected: _owners.indexOf(ownerFilter),
                   onChanged: (i) => onOwnerFilterChanged(_owners[i]),
                 ),
@@ -131,10 +131,9 @@ class WalletRail extends StatelessWidget {
                     bottom: compact ? 0 : 10,
                     right: compact ? 10 : 0,
                   ),
-                  child: SkeletonBox(
-                    width: compact ? 260 : double.infinity,
-                    height: compact ? 64 : 64,
-                    borderRadius: const BorderRadius.all(Radius.circular(14)),
+                  child: SizedBox(
+                    width: compact ? 260 : null,
+                    child: const _AccountSkeleton(),
                   ),
                 ),
             ],
@@ -353,6 +352,49 @@ class WalletRail extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// An account card's shape while it loads: icon tile, name and type lines,
+/// balance chip — on a surface card so it reads against the ground.
+class _AccountSkeleton extends StatelessWidget {
+  const _AccountSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 64),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: context.c.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Row(
+        children: [
+          SkeletonBox(
+            width: 34,
+            height: 34,
+            borderRadius: BorderRadius.all(Radius.circular(9)),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 96, height: 13),
+                SizedBox(height: 8),
+                SkeletonBox(width: 64, height: 10),
+              ],
+            ),
+          ),
+          SkeletonBox(
+            width: 64,
+            height: 24,
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+        ],
       ),
     );
   }

@@ -470,7 +470,8 @@ class FamFiConsoleBody extends StatefulWidget {
 }
 
 class _ConsoleState extends State<FamFiConsoleBody> {
-  static const _owners = [Owner.josh, Owner.judy];
+  // Read live: someone can join while the console is open.
+  List<Owner> get _owners => Owner.people;
 
   // The tab rides in the URL (?tab=), so a reload lands back where you were.
   FFTab _tab =
@@ -498,8 +499,21 @@ class _ConsoleState extends State<FamFiConsoleBody> {
   // PaydayScreen: one amount + focus node per owner, plus user overrides for
   // their deposit account and next payday (falls back to the store's own
   // pick for that owner otherwise).
-  final _amounts = {for (final o in _owners) o: TextEditingController()};
-  final _amountFocus = {for (final o in _owners) o: FocusNode()};
+  final _amounts = <Owner, TextEditingController>{};
+  final _amountFocus = <Owner, FocusNode>{};
+
+  /// Gives every current member a cheque field; idempotent, so `build` calls
+  /// it to pick up anyone who joined since.
+  void _ensureOwnerFields() {
+    for (final o in _owners) {
+      _amounts.putIfAbsent(
+        o,
+        () => TextEditingController()..addListener(() => setState(() {})),
+      );
+      _amountFocus.putIfAbsent(o, FocusNode.new);
+    }
+  }
+
   final _pickedInto = <Owner, String>{};
   final _pickedNext = <Owner, DateTime>{};
 
@@ -508,10 +522,9 @@ class _ConsoleState extends State<FamFiConsoleBody> {
     super.initState();
     HardwareKeyboard.instance.addHandler(_onKey);
     _search.addListener(_onSearchChanged);
-    // The split, Left in hand and the wallet's deltas all read the cheques.
-    for (final o in _owners) {
-      _amounts[o]!.addListener(() => setState(() {}));
-    }
+    // The split, Left in hand and the wallet's deltas all read the cheques
+    // (each field's listener is added in _ensureOwnerFields).
+    _ensureOwnerFields();
   }
 
   @override
@@ -520,9 +533,11 @@ class _ConsoleState extends State<FamFiConsoleBody> {
     _search.removeListener(_onSearchChanged);
     _search.dispose();
     _searchFocus.dispose();
-    for (final o in _owners) {
-      _amounts[o]!.dispose();
-      _amountFocus[o]!.dispose();
+    for (final c in _amounts.values) {
+      c.dispose();
+    }
+    for (final f in _amountFocus.values) {
+      f.dispose();
     }
     super.dispose();
   }
@@ -531,7 +546,12 @@ class _ConsoleState extends State<FamFiConsoleBody> {
   /// first, as the phone does on every tab change.
   void _goTab(FFTab t) {
     if (t == _tab) return;
-    setState(() => _tab = t);
+    setState(() {
+      _tab = t;
+      // An open form belongs to the tab it was opened from.
+      _drawerOpen = false;
+      _selectedAccountId = null;
+    });
     SystemNavigator.routeInformationUpdated(
       uri: Uri(path: '/famfi/personal', queryParameters: {'tab': t.name}),
       replace: true,
@@ -649,7 +669,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
       case FFTab.bills:
         openDrawer(BillDrawer(store: store, onClose: closeDrawer));
       case FFTab.payday:
-        _amountFocus[Owner.josh]!.requestFocus();
+        _amountFocus[widget.store.me]?.requestFocus();
       case FFTab.budget:
         openDrawer(BudgetDrawer(store: store, onClose: closeDrawer));
     }
@@ -739,6 +759,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
 
   @override
   Widget build(BuildContext context) {
+    _ensureOwnerFields();
     final store = widget.store;
     return ListenableBuilder(
       listenable: store,
@@ -949,7 +970,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
         key: ValueKey('${_tab.name}${_refreshing ? '·loading' : ''}'),
         // Data arrives as a slide-and-fade; inner lists stagger on top.
         child: _refreshing
-            ? const _PanelSkeleton()
+            ? _PanelSkeleton(_tab)
             : Reveal(index: 0, slide: 14, durationMs: 420, child: panel),
       ),
     );
@@ -1001,20 +1022,167 @@ class _ConsoleState extends State<FamFiConsoleBody> {
   }
 }
 
-/// A panel's shape while its data reloads: title, then a stack of cards.
+/// A panel's shape while its data reloads — the page it is about to become,
+/// so nothing jumps when the real content lands.
 class _PanelSkeleton extends StatelessWidget {
-  const _PanelSkeleton();
+  final FFTab tab;
+  const _PanelSkeleton(this.tab);
 
-  @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.fromLTRB(40, 4, 40, 0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  static Widget _title({double w = 200, bool action = false}) => Row(
+    children: [
+      SkeletonBox(width: w, height: 34),
+      const Spacer(),
+      if (action) ...[
+        const SkeletonBox(
+          width: 92,
+          height: 36,
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+        ),
+        const SizedBox(width: 8),
+        const SkeletonBox(
+          width: 92,
+          height: 36,
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+        ),
+      ],
+    ],
+  );
+
+  /// A surface card holding [child], like the real panels' cards.
+  static Widget _card(BuildContext context, Widget child, {double? height}) =>
+      Container(
+        height: height,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: context.c.surface,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: child,
+      );
+
+  static const _round = BorderRadius.all(Radius.circular(22));
+
+  /// Icon circle, two lines, and values — a transaction, bill or budget row.
+  static Widget _row(BuildContext context, {int values = 1}) => _card(
+    context,
+    Row(
       children: [
-        SkeletonBox(width: 200, height: 34),
-        SizedBox(height: 24),
-        SkeletonListCard(rows: 6),
+        const SkeletonBox(width: 44, height: 44, borderRadius: _round),
+        const SizedBox(width: 14),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonBox(width: 150, height: 14),
+              SizedBox(height: 8),
+              SkeletonBox(width: 90, height: 11),
+            ],
+          ),
+        ),
+        for (var i = 0; i < values; i++) ...[
+          const SizedBox(width: 24),
+          const SkeletonBox(width: 70, height: 16),
+        ],
       ],
     ),
   );
+
+  @override
+  Widget build(BuildContext context) {
+    final body = switch (tab) {
+      FFTab.ledger => [
+        _title(w: 230, action: true),
+        const SizedBox(height: 14),
+        const SkeletonBox(width: 240, height: 14),
+        const SizedBox(height: 16),
+        _card(context, const SkeletonBox(width: double.infinity, height: 38)),
+        const SizedBox(height: 6),
+        for (var i = 0; i < 6; i++) _row(context, values: 3),
+      ],
+      FFTab.bills => [
+        _title(w: 120),
+        const SizedBox(height: 20),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 5,
+              child: _card(
+                context,
+                const SkeletonBox(width: double.infinity, height: 300),
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              flex: 6,
+              child: Column(
+                children: [
+                  for (var i = 0; i < 4; i++) _row(context, values: 2),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+      FFTab.payday => [
+        _title(w: 150),
+        const SizedBox(height: 20),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 340,
+              child: Column(
+                children: [
+                  for (var i = 0; i < 2; i++)
+                    _card(
+                      context,
+                      const SkeletonBox(width: double.infinity, height: 150),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Column(
+                children: [
+                  for (var i = 0; i < 3; i++) _row(context, values: 2),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+      FFTab.budget => [
+        _title(w: 150, action: false),
+        const SizedBox(height: 20),
+        for (var i = 0; i < 5; i++)
+          _card(
+            context,
+            const Row(
+              children: [
+                SkeletonBox(width: 34, height: 34, borderRadius: _round),
+                SizedBox(width: 14),
+                SkeletonBox(width: 120, height: 14),
+                SizedBox(width: 24),
+                Expanded(child: SkeletonBox(width: double.infinity, height: 8)),
+                SizedBox(width: 24),
+                SkeletonBox(width: 70, height: 16),
+                SizedBox(width: 24),
+                SkeletonBox(width: 70, height: 16),
+              ],
+            ),
+          ),
+      ],
+    };
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(40, 4, 40, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: body,
+      ),
+    );
+  }
 }

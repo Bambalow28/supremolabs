@@ -7,6 +7,8 @@ import 'package:juwa_wealth/store.dart';
 import 'package:juwa_wealth/widgets.dart';
 
 import '../ff_theme.dart';
+import 'csv_download.dart';
+import 'csv_export.dart';
 import 'drawer.dart'
     show DPickerButton, categoryLabel, openTransactionDetail, pickFrom;
 
@@ -29,16 +31,13 @@ class LedgerPanel extends StatefulWidget {
 }
 
 class _LedgerPanelState extends State<LedgerPanel> {
-  DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
-  String? _accountFilter;
-  String? _categoryFilter;
-  Owner? _byFilter;
+  _Filters _filters = const _Filters();
 
   final _entryName = TextEditingController();
   final _entryAmount = TextEditingController();
   String? _entryAccountId;
   String? _entryCategoryId;
-  Owner _entryBy = Owner.josh;
+  late Owner _entryBy = widget.store.me;
   DateTime _entryDate = DateTime.now();
   bool _entryNegative = true;
 
@@ -54,15 +53,28 @@ class _LedgerPanelState extends State<LedgerPanel> {
     super.dispose();
   }
 
-  int _categoryFilterIndex() {
-    if (_categoryFilter == null) return 0;
-    final bi = widget.store.budgets.indexWhere((b) => b.id == _categoryFilter);
-    if (bi >= 0) return 1 + bi;
-    final ci = widget.store.categories.indexWhere(
-      (c) => c.id == _categoryFilter,
+  Future<void> _openFilters() async {
+    final next = await showDialog<_Filters>(
+      context: context,
+      builder: (_) => FFPopIn(
+        child: _FilterDialog(store: widget.store, initial: _filters),
+      ),
     );
-    return ci >= 0 ? 1 + widget.store.budgets.length + ci : 0;
+    if (next != null) setState(() => _filters = next);
   }
+
+  Future<void> _openExport() => showDialog<void>(
+    context: context,
+    builder: (_) => FFPopIn(
+      child: _ExportDialog(
+        store: widget.store,
+        month:
+            _filters.month ??
+            DateTime(DateTime.now().year, DateTime.now().month),
+        accountId: _filters.accountId,
+      ),
+    ),
+  );
 
   void _addEntry() {
     final amt = AmountField.parse(_entryAmount.text);
@@ -93,19 +105,22 @@ class _LedgerPanelState extends State<LedgerPanel> {
       _entryAccountId = widget.store.accounts.firstOrNull?.id;
     }
 
-    final monthTx = widget.store.transactions.where(
-      // A search spans every month; browsing sticks to the one shown.
-      (t) =>
-          widget.searchQuery.isNotEmpty ||
-          (t.date.year == _month.year && t.date.month == _month.month),
-    );
-    var filtered = monthTx.where((t) {
-      if (_accountFilter != null && t.accountId != _accountFilter) return false;
-      if (_categoryFilter != null && t.categoryId != _categoryFilter) {
+    final f = _filters;
+    final searching = widget.searchQuery.isNotEmpty;
+    var filtered = widget.store.transactions.where((t) {
+      // A search spans every month; a picked month narrows to it; otherwise
+      // it's simply the most recent, everywhere.
+      if (!searching &&
+          f.month != null &&
+          !(t.date.year == f.month!.year && t.date.month == f.month!.month)) {
         return false;
       }
-      if (_byFilter != null && t.by != _byFilter) return false;
-      if (widget.searchQuery.isNotEmpty) {
+      if (f.accountId != null && t.accountId != f.accountId) return false;
+      if (f.categoryId != null && t.categoryId != f.categoryId) return false;
+      if (f.by != null && t.by != f.by) return false;
+      if (f.type == _Type.spent && t.amount >= 0) return false;
+      if (f.type == _Type.received && t.amount <= 0) return false;
+      if (searching) {
         final q = widget.searchQuery.toLowerCase();
         final cat = categoryLabel(widget.store, t.categoryId).toLowerCase();
         if (!t.name.toLowerCase().contains(q) && !cat.contains(q)) return false;
@@ -118,7 +133,11 @@ class _LedgerPanelState extends State<LedgerPanel> {
         .fold(0.0, (s, t) => s + t.amount);
     final totalOut = filtered
         .where((t) => t.amount < 0)
-        .fold(0.0, (s, t) => s + t.amount);
+        .fold(0.0, (s, t) => s + -t.amount);
+    // Cards aren't lazy, so a long history is capped; the totals above still
+    // cover everything the filters match.
+    const cap = 100;
+    final shown = filtered.take(cap).toList();
 
     if (widget.store.accounts.isEmpty) {
       return Padding(
@@ -135,144 +154,77 @@ class _LedgerPanelState extends State<LedgerPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 18,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(
-                'Transactions',
-                style: ff(
-                  32,
-                  weight: FontWeight.w800,
-                  color: c.ink,
-                  spacing: -1,
-                ),
-              ),
-              // Arrows and label share one centred row, so the year sits on
-              // the arrows' midline rather than the title's baseline.
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _MonthArrow(
-                    icon: Icons.chevron_left_rounded,
-                    onTap: () => setState(
-                      () => _month = DateTime(_month.year, _month.month - 1),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      '${_months[_month.month - 1]} ${_month.year}',
-                      style: ff(15, color: c.muted),
-                    ),
-                  ),
-                  _MonthArrow(
-                    icon: Icons.chevron_right_rounded,
-                    onTap: () => setState(
-                      () => _month = DateTime(_month.year, _month.month + 1),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    FilterPill(
-                      label: _accountFilter == null
-                          ? 'All accounts'
-                          : (widget.store.accounts
-                                    .where((a) => a.id == _accountFilter)
-                                    .firstOrNull
-                                    ?.name ??
-                                'All accounts'),
-                      options: [
-                        'All accounts',
-                        for (final a in widget.store.accounts) a.name,
-                      ],
-                      selected: _accountFilter == null
-                          ? 0
-                          : widget.store.accounts.indexWhere(
-                                  (a) => a.id == _accountFilter,
-                                ) +
-                                1,
-                      onChanged: (i) => setState(
-                        () => _accountFilter = i == 0
-                            ? null
-                            : widget.store.accounts[i - 1].id,
-                      ),
-                    ),
-                    FilterPill(
-                      label: _categoryFilter == null
-                          ? 'Any category'
-                          : categoryLabel(widget.store, _categoryFilter),
-                      options: [
-                        'Any category',
-                        for (final b in widget.store.budgets) b.name,
-                        for (final cat in widget.store.categories) cat.name,
-                      ],
-                      selected: _categoryFilterIndex(),
-                      onChanged: (i) {
-                        if (i == 0) {
-                          return setState(() => _categoryFilter = null);
-                        }
-                        final bi = i - 1;
-                        if (bi < widget.store.budgets.length) {
-                          setState(
-                            () => _categoryFilter = widget.store.budgets[bi].id,
-                          );
-                        } else {
-                          setState(
-                            () => _categoryFilter = widget
-                                .store
-                                .categories[bi - widget.store.budgets.length]
-                                .id,
-                          );
-                        }
-                      },
-                    ),
-                    FilterPill(
-                      label: _byFilter == null ? 'All' : _byFilter!.label,
-                      options: const ['All', 'Josh', 'Judy'],
-                      selected: _byFilter == null
-                          ? 0
-                          : (_byFilter == Owner.josh ? 1 : 2),
-                      onChanged: (i) => setState(
-                        () => _byFilter = i == 0
-                            ? null
-                            : (i == 1 ? Owner.josh : Owner.judy),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Transactions',
+                  style: ff(
+                    32,
+                    weight: FontWeight.w800,
+                    color: c.ink,
+                    spacing: -1,
+                  ),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: _openExport,
+                icon: const Icon(Icons.file_download_outlined, size: 18),
+                label: const Text('Export'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: c.ink,
+                  side: BorderSide(color: c.rule),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Badge(
+                isLabelVisible: f.count > 0,
+                label: Text('${f.count}'),
+                backgroundColor: c.ink,
+                textColor: c.bg,
+                child: OutlinedButton.icon(
+                  onPressed: _openFilters,
+                  icon: const Icon(Icons.tune_rounded, size: 18),
+                  label: const Text('Filters'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: c.ink,
+                    side: BorderSide(color: c.rule),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // What's on screen on the left, its totals pushed to the right edge.
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  searching
+                      ? 'Search results · every month'
+                      : f.month == null
+                      ? 'Most recent · ${f.summary(widget.store)}'
+                      : '${_monthName(f.month!)} · ${f.summary(widget.store)}',
+                  overflow: TextOverflow.ellipsis,
+                  style: ff(14, color: c.muted),
                 ),
               ),
               const SizedBox(width: 16),
-              Flexible(
-                child: Text.rich(
-                  TextSpan(
-                    style: ff(13.5, color: c.muted),
-                    children: [
-                      const TextSpan(text: 'In '),
-                      TextSpan(
-                        text: ffAmount(totalIn),
-                        style: ff(13.5, weight: FontWeight.w700, color: c.good),
-                      ),
-                      const TextSpan(text: ' · Out '),
-                      TextSpan(
-                        text: ffAmount(totalOut),
-                        style: ff(13.5, weight: FontWeight.w700, color: c.bad),
-                      ),
-                    ],
-                  ),
-                  overflow: TextOverflow.ellipsis,
+              Text.rich(
+                TextSpan(
+                  style: ff(13.5, color: c.muted),
+                  children: [
+                    const TextSpan(text: 'In '),
+                    TextSpan(
+                      text: ffAmount(totalIn),
+                      style: ff(13.5, weight: FontWeight.w700, color: c.good),
+                    ),
+                    const TextSpan(text: '  ·  Out '),
+                    TextSpan(
+                      text: ffAmount(totalOut),
+                      style: ff(13.5, weight: FontWeight.w700, color: c.bad),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -312,14 +264,16 @@ class _LedgerPanelState extends State<LedgerPanel> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                'No transactions yet — the entry row above adds your first.',
+                _filters.count > 0 || searching
+                    ? 'Nothing matches — loosen the filters.'
+                    : 'No transactions yet — the entry row above adds your first.',
                 style: ff(14, color: c.muted),
               ),
             )
           else
             // One card per transaction, newest first, each sliding in on
             // its own beat.
-            for (final (i, t) in filtered.indexed)
+            for (final (i, t) in shown.indexed)
               Reveal(
                 index: i,
                 child: _TxRow(
@@ -333,7 +287,411 @@ class _LedgerPanelState extends State<LedgerPanel> {
                   ),
                 ),
               ),
+          if (filtered.length > cap)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Showing the latest $cap of ${filtered.length} — narrow with '
+                'Filters, or pick a month.',
+                style: ff(12.5, color: c.faint),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+String _monthName(DateTime m) =>
+    '${_LedgerPanelState._months[m.month - 1]} ${m.year}';
+
+enum _Type { all, spent, received }
+
+/// The ledger's active filters. Immutable; the dialog hands back a new one.
+class _Filters {
+  final String? accountId;
+  final String? categoryId;
+  final Owner? by;
+  final _Type type;
+
+  /// Null = most recent across every month.
+  final DateTime? month;
+
+  const _Filters({
+    this.accountId,
+    this.categoryId,
+    this.by,
+    this.type = _Type.all,
+    this.month,
+  });
+
+  /// How many are narrowing the default view (for the button's badge).
+  int get count =>
+      (accountId != null ? 1 : 0) +
+      (categoryId != null ? 1 : 0) +
+      (by != null ? 1 : 0) +
+      (type != _Type.all ? 1 : 0) +
+      (month != null ? 1 : 0);
+
+  String summary(JuwaStore store) {
+    final account = store.accounts
+        .where((a) => a.id == accountId)
+        .firstOrNull
+        ?.name;
+    final parts = [
+      account ?? 'All accounts',
+      if (categoryId != null) categoryLabel(store, categoryId),
+      if (by != null) 'by ${by!.label}',
+      if (type != _Type.all) type == _Type.spent ? 'spent' : 'received',
+    ];
+    return parts.join(' · ');
+  }
+}
+
+class _FilterDialog extends StatefulWidget {
+  final JuwaStore store;
+  final _Filters initial;
+  const _FilterDialog({required this.store, required this.initial});
+
+  @override
+  State<_FilterDialog> createState() => _FilterDialogState();
+}
+
+class _FilterDialogState extends State<_FilterDialog> {
+  late _Filters _f = widget.initial;
+
+  // copyWith can't clear a field, so rebuild from parts.
+  void _set({
+    Object? account = _keep,
+    Object? category = _keep,
+    Object? by = _keep,
+    _Type? type,
+    Object? month = _keep,
+  }) => setState(
+    () => _f = _Filters(
+      accountId: identical(account, _keep) ? _f.accountId : account as String?,
+      categoryId: identical(category, _keep)
+          ? _f.categoryId
+          : category as String?,
+      by: identical(by, _keep) ? _f.by : by as Owner?,
+      type: type ?? _f.type,
+      month: identical(month, _keep) ? _f.month : month as DateTime?,
+    ),
+  );
+
+  static const _keep = Object();
+
+  Widget _chips<T>({
+    required List<(String, T?)> options,
+    required T? selected,
+    required void Function(T?) onPick,
+  }) => Wrap(
+    spacing: 6,
+    runSpacing: 6,
+    children: [
+      for (final o in options)
+        ChoiceChip(
+          label: Text(o.$1),
+          selected: selected == o.$2,
+          onSelected: (_) => onPick(o.$2),
+        ),
+    ],
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final store = widget.store;
+    final month = _f.month;
+    return Dialog(
+      backgroundColor: c.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460, maxHeight: 640),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 22, 12, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Filters',
+                      style: ff(18, weight: FontWeight.w800, color: c.ink),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close_rounded, color: c.muted),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _label(c, 'Period'),
+                    _chips<bool>(
+                      options: const [
+                        ('Most recent', false),
+                        ('By month', true),
+                      ],
+                      selected: month != null,
+                      onPick: (v) => _set(
+                        month: v == true
+                            ? DateTime(
+                                DateTime.now().year,
+                                DateTime.now().month,
+                              )
+                            : null,
+                      ),
+                    ),
+                    if (month != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            _MonthArrow(
+                              icon: Icons.chevron_left_rounded,
+                              onTap: () => _set(
+                                month: DateTime(month.year, month.month - 1),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                              child: Text(
+                                _monthName(month),
+                                style: ff(15, color: c.ink),
+                              ),
+                            ),
+                            _MonthArrow(
+                              icon: Icons.chevron_right_rounded,
+                              onTap: () => _set(
+                                month: DateTime(month.year, month.month + 1),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    _label(c, 'Account'),
+                    _chips<String>(
+                      options: [
+                        ('All', null),
+                        for (final a in store.accounts) (a.name, a.id),
+                      ],
+                      selected: _f.accountId,
+                      onPick: (v) => _set(account: v),
+                    ),
+                    _label(c, 'Category'),
+                    _chips<String>(
+                      options: [
+                        ('Any', null),
+                        for (final b in store.budgets) (b.name, b.id),
+                        for (final cat in store.categories) (cat.name, cat.id),
+                      ],
+                      selected: _f.categoryId,
+                      onPick: (v) => _set(category: v),
+                    ),
+                    _label(c, 'Added by'),
+                    _chips<Owner>(
+                      options: [
+                        ('All', null),
+                        for (final o in Owner.people) (o.title, o),
+                      ],
+                      selected: _f.by,
+                      onPick: (v) => _set(by: v),
+                    ),
+                    _label(c, 'Type'),
+                    _chips<_Type>(
+                      options: const [
+                        ('All', _Type.all),
+                        ('Spent', _Type.spent),
+                        ('Received', _Type.received),
+                      ],
+                      selected: _f.type,
+                      onPick: (v) => _set(type: v ?? _Type.all),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, const _Filters()),
+                    child: const Text('Reset'),
+                  ),
+                  const Spacer(),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, _f),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: c.ink,
+                      foregroundColor: c.bg,
+                    ),
+                    child: const Text('Apply'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _label(JuwaColors c, String t) => Padding(
+    padding: const EdgeInsets.only(top: 16, bottom: 8),
+    child: Text(
+      t,
+      style: ff(12.5, weight: FontWeight.w600, color: c.muted),
+    ),
+  );
+}
+
+/// Pick a month (and optionally one account) and download it as CSV.
+class _ExportDialog extends StatefulWidget {
+  final JuwaStore store;
+  final DateTime month;
+  final String? accountId;
+  const _ExportDialog({
+    required this.store,
+    required this.month,
+    required this.accountId,
+  });
+
+  @override
+  State<_ExportDialog> createState() => _ExportDialogState();
+}
+
+class _ExportDialogState extends State<_ExportDialog> {
+  late DateTime _month = widget.month;
+  late String? _accountId = widget.accountId;
+
+  Iterable<Transaction> get _rows => widget.store.transactions.where(
+    (t) =>
+        t.date.year == _month.year &&
+        t.date.month == _month.month &&
+        (_accountId == null || t.accountId == _accountId),
+  );
+
+  void _download() {
+    final account = widget.store.accounts
+        .where((a) => a.id == _accountId)
+        .firstOrNull
+        ?.name;
+    final slug = account?.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+    downloadCsv(
+      'famfi-${_month.year}-${_month.month.toString().padLeft(2, '0')}'
+      '${slug == null ? '' : '-$slug'}.csv',
+      transactionsCsv(widget.store, _rows),
+    );
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final count = _rows.length;
+    return Dialog(
+      backgroundColor: c.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Export statement',
+                style: ff(18, weight: FontWeight.w800, color: c.ink),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'A CSV of one month, oldest first.',
+                style: ff(13, color: c.muted),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  _MonthArrow(
+                    icon: Icons.chevron_left_rounded,
+                    onTap: () => setState(
+                      () => _month = DateTime(_month.year, _month.month - 1),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      _monthName(_month),
+                      style: ff(16, weight: FontWeight.w600, color: c.ink),
+                    ),
+                  ),
+                  _MonthArrow(
+                    icon: Icons.chevron_right_rounded,
+                    onTap: () => setState(
+                      () => _month = DateTime(_month.year, _month.month + 1),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  ChoiceChip(
+                    label: const Text('All accounts'),
+                    selected: _accountId == null,
+                    onSelected: (_) => setState(() => _accountId = null),
+                  ),
+                  for (final a in widget.store.accounts)
+                    ChoiceChip(
+                      label: Text(a.name),
+                      selected: _accountId == a.id,
+                      onSelected: (_) => setState(() => _accountId = a.id),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                count == 0
+                    ? 'No transactions in ${_monthName(_month)}.'
+                    : '$count ${count == 1 ? 'transaction' : 'transactions'}',
+                style: ff(13.5, color: c.muted),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: count == 0 ? null : _download,
+                    icon: const Icon(Icons.file_download_outlined, size: 18),
+                    label: const Text('Download CSV'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: c.ink,
+                      foregroundColor: c.bg,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -599,9 +957,9 @@ class _EntryRow extends StatelessWidget {
     final ownerField = SizedBox(
       width: 128,
       child: SegmentedTabs(
-        labels: const ['Josh', 'Judy'],
-        selected: by == Owner.josh ? 0 : 1,
-        onChanged: (i) => onByChanged(i == 0 ? Owner.josh : Owner.judy),
+        labels: [for (final o in Owner.people) o.title],
+        selected: Owner.people.indexOf(by).clamp(0, Owner.people.length - 1),
+        onChanged: (i) => onByChanged(Owner.people[i]),
       ),
     );
     final signField = SizedBox(

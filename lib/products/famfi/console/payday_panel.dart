@@ -14,7 +14,7 @@ String _ownerName(Owner o) =>
     '${o.label[0]}${o.label.substring(1).toLowerCase()}';
 
 class PaydayPanel extends StatelessWidget {
-  static const _owners = [Owner.josh, Owner.judy];
+  List<Owner> get _owners => Owner.people;
 
   final JuwaStore store;
   final Map<Owner, TextEditingController> amountControllers;
@@ -377,7 +377,7 @@ class _DateField extends StatelessWidget {
 }
 
 class _SplitAndLeft extends StatelessWidget {
-  static const _owners = [Owner.josh, Owner.judy];
+  List<Owner> get _owners => Owner.people;
 
   final JuwaStore store;
   final Map<Owner, SplitResult> splits;

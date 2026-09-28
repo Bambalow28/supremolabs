@@ -2,6 +2,7 @@
 // editors, plus payday history. All are compact desktop forms over the same
 // JuwaStore API the phone editors use — no full-screen Scaffold, since these
 // live inside a 440px panel.
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:juwa_wealth/models.dart';
@@ -330,7 +331,7 @@ class _AccountDrawerState extends State<AccountDrawer> {
         : AmountField.format(widget.account!.balance.abs()),
   );
   late AccountKind _kind = widget.account?.kind ?? AccountKind.chequing;
-  late Owner _owner = widget.account?.owner ?? Owner.josh;
+  late Owner _owner = widget.account?.owner ?? widget.store.me;
   late String _color = widget.account?.color ?? juwaSwatches.first.key;
   late String _icon = widget.account?.icon ?? juwaIcons.keys.first;
 
@@ -391,7 +392,17 @@ class _AccountDrawerState extends State<AccountDrawer> {
           stamp: _owner.label,
           color: _color,
           icon: _icon,
-          balance: AmountField.parse(_balance.text) ?? 0,
+          // Typed unsigned; a card or line of credit is owed, so it's saved
+          // (and must preview) negative — else it reads green here, red in
+          // the list.
+          balance:
+              (_owes ? -1 : 1) * (AmountField.parse(_balance.text) ?? 0) +
+              // The list card shows starting balance plus its transactions,
+              // so the preview must too.
+              (widget.account == null
+                  ? 0
+                  : widget.store.balanceOf(widget.account!.id) -
+                        widget.account!.balance),
           height: 90,
         ),
         DField(
@@ -429,9 +440,9 @@ class _AccountDrawerState extends State<AccountDrawer> {
         DField(
           label: 'Owner',
           child: SegmentedTabs(
-            labels: const ['Josh', 'Judy', 'Joint'],
-            selected: Owner.values.indexOf(_owner),
-            onChanged: (i) => setState(() => _owner = Owner.values[i]),
+            labels: [for (final o in Owner.all) o.title],
+            selected: Owner.all.indexOf(_owner).clamp(0, Owner.all.length - 1),
+            onChanged: (i) => setState(() => _owner = Owner.all[i]),
           ),
         ),
         DField(
@@ -560,7 +571,7 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
       (widget.store.accounts.isEmpty ? null : widget.store.accounts.first.id);
   late DateTime _date = widget.transaction?.date ?? DateTime.now();
   late String? _categoryId = widget.transaction?.categoryId;
-  late Owner _by = widget.transaction?.by ?? Owner.josh;
+  late Owner _by = widget.transaction?.by ?? widget.store.me;
 
   bool get _editing => widget.transaction != null;
 
@@ -734,10 +745,11 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
         DField(
           label: 'By',
           child: SegmentedTabs(
-            labels: const ['Josh', 'Judy'],
-            selected: _by == Owner.josh ? 0 : 1,
-            onChanged: (i) =>
-                setState(() => _by = i == 0 ? Owner.josh : Owner.judy),
+            labels: [for (final o in Owner.people) o.title],
+            selected: Owner.people
+                .indexOf(_by)
+                .clamp(0, Owner.people.length - 1),
+            onChanged: (i) => setState(() => _by = Owner.people[i]),
           ),
         ),
         DField(
@@ -1038,8 +1050,32 @@ class _BudgetDrawerState extends State<BudgetDrawer> {
         ? ''
         : AmountField.format(widget.store.manualSpentNow(widget.budget!)),
   );
+  late BudgetPeriod _period = widget.budget?.period ?? BudgetPeriod.monthly;
+  late DateTime? _startDate = widget.budget?.startDate;
 
   bool get _editing => widget.budget != null;
+
+  String get _restartLabel => Budget(
+    id: '',
+    name: '',
+    monthlyTarget: 0,
+    spent: 0,
+    month: '',
+    period: _period,
+    startDate: _startDate,
+  ).restartLabel;
+
+  Future<void> _pickStart() async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: _startDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      helpText: 'Restarts on',
+      builder: (_, child) => FFPopIn(child: child!),
+    );
+    if (d != null) setState(() => _startDate = d);
+  }
 
   @override
   void dispose() {
@@ -1054,15 +1090,17 @@ class _BudgetDrawerState extends State<BudgetDrawer> {
     if (_name.text.trim().isEmpty || target == null) return;
     final spent = AmountField.parse(_spent.text) ?? 0;
     final store = widget.store;
-    final now = DateTime.now();
-    final month = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-    final budget = Budget(
+    final draft = Budget(
       id: widget.budget?.id ?? store.newId(),
       name: _name.text.trim(),
       monthlyTarget: target,
       spent: spent,
-      month: month,
+      month: '',
+      period: _period,
+      startDate: _startDate,
     );
+    // Stamp the hand-entered amount with the period it was typed for.
+    final budget = draft.copyWith(month: draft.periodKey(DateTime.now()));
     if (_editing) {
       await store.updateBudget(budget);
     } else {
@@ -1097,11 +1135,26 @@ class _BudgetDrawerState extends State<BudgetDrawer> {
           ),
         ),
         DField(
-          label: 'Monthly target',
+          label: 'Repeats',
+          child: SegmentedTabs(
+            labels: [for (final p in BudgetPeriod.values) p.label],
+            selected: _period.index,
+            onChanged: (i) => setState(() => _period = BudgetPeriod.values[i]),
+          ),
+        ),
+        DField(
+          label: 'Restarts',
+          child: DPickerButton(
+            onTap: _pickStart,
+            child: Text(_restartLabel, style: ff(14, color: c.ink)),
+          ),
+        ),
+        DField(
+          label: '${_period.label} target',
           child: AmountField(controller: _target, fontSize: 18),
         ),
         DField(
-          label: 'Spent this month',
+          label: 'Spent this ${_period.noun}',
           child: AmountField(controller: _spent, fontSize: 18),
         ),
         if (widget.budget != null)
@@ -1206,26 +1259,125 @@ Widget receiptField(BuildContext context, JuwaStore store, String fileName) {
     child: GestureDetector(
       onTap: () => showDialog<void>(
         context: context,
-        builder: (ctx) => FFPopIn(
-          child: Dialog(
-            backgroundColor: Colors.transparent,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: SizedBox(
-                width: 480,
-                height: 480,
-                child: ReceiptImage(store, fileName, height: 480),
-              ),
-            ),
-          ),
+        builder: (_) => FFPopIn(
+          child: _ReceiptDialog(store: store, fileName: fileName),
         ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: ReceiptImage(store, fileName, height: 260),
+        child: SizedBox(
+          height: 260,
+          width: double.infinity,
+          child: _ReceiptPhoto(store, fileName, fit: BoxFit.cover),
+        ),
       ),
     ),
   );
+}
+
+/// A receipt's bytes as an image that can't take the page down: a failed
+/// fetch, an undecodable file or a huge photo all fall back to a quiet
+/// "unavailable" tile.
+class _ReceiptPhoto extends StatefulWidget {
+  final JuwaStore store;
+  final String fileName;
+  final BoxFit fit;
+  const _ReceiptPhoto(this.store, this.fileName, {required this.fit});
+
+  @override
+  State<_ReceiptPhoto> createState() => _ReceiptPhotoState();
+}
+
+class _ReceiptPhotoState extends State<_ReceiptPhoto> {
+  late final Future<Uint8List?> _bytes = widget.store
+      .receiptBytes(widget.fileName)
+      .then<Uint8List?>((b) => b)
+      .catchError((Object _) => null);
+
+  Widget _unavailable(BuildContext context) {
+    final c = context.c;
+    return ColoredBox(
+      color: c.fill,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.receipt_long_rounded, color: c.faint, size: 28),
+            const SizedBox(height: 6),
+            Text('Photo unavailable', style: ff(12, color: c.faint)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List?>(
+      future: _bytes,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const SkeletonBox(width: double.infinity, height: 260);
+        }
+        final bytes = snap.data;
+        if (bytes == null) return _unavailable(context);
+        return Image.memory(
+          bytes,
+          fit: widget.fit,
+          // Decode at screen size, not camera size.
+          cacheWidth: 1400,
+          errorBuilder: (context, _, _) => _unavailable(context),
+        );
+      },
+    );
+  }
+}
+
+class _ReceiptDialog extends StatelessWidget {
+  final JuwaStore store;
+  final String fileName;
+  const _ReceiptDialog({required this.store, required this.fileName});
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(24),
+      child: Stack(
+        alignment: Alignment.topRight,
+        children: [
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 560,
+              maxHeight: size.height * 0.85,
+              minHeight: 200,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              // Pinch or scroll to zoom in on the small print.
+              child: InteractiveViewer(
+                maxScale: 5,
+                child: SizedBox(
+                  width: 560,
+                  height: size.height * 0.85,
+                  child: _ReceiptPhoto(store, fileName, fit: BoxFit.contain),
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close_rounded),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.black54,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Read-only value under a label — the view-mode twin of a [DField].
@@ -1240,10 +1392,16 @@ class DRead extends StatelessWidget {
 
 Widget _editButton(BuildContext context, VoidCallback onTap) => Padding(
   padding: const EdgeInsets.only(right: 4),
-  child: FilledButton.tonalIcon(
-    onPressed: onTap,
-    icon: const Icon(Icons.edit_rounded, size: 16),
-    label: const Text('Edit'),
+  child: SizedBox(
+    height: 36,
+    child: FilledButton.tonal(
+      onPressed: onTap,
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        alignment: Alignment.center,
+      ),
+      child: const Text('Edit'),
+    ),
   ),
 );
 
@@ -1453,7 +1611,8 @@ class BudgetDetailDrawer extends StatelessWidget {
                     style: ff(30, weight: FontWeight.w800, color: c.ink),
                   ),
                   TextSpan(
-                    text: '  of ${ffAmount(b.monthlyTarget)} this month',
+                    text:
+                        '  of ${ffAmount(b.monthlyTarget)} this ${b.period.noun}',
                   ),
                 ],
               ),
@@ -1461,6 +1620,11 @@ class BudgetDetailDrawer extends StatelessWidget {
             const SizedBox(height: 12),
             BudgetBar(spent: spent, target: b.monthlyTarget, color: c.tint),
             const SizedBox(height: 10),
+            Text(
+              '${b.period.label} · restarts ${b.restartLabel.toLowerCase()}',
+              style: ff(12.5, color: c.faint),
+            ),
+            const SizedBox(height: 4),
             Text(
               left < 0 ? '${ffAmount(left)} over' : '${ffAmount(left)} left',
               style: ff(
