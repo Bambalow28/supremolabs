@@ -421,6 +421,14 @@ class _TxRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    if (tx.receipt != null) ...[
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.receipt_long_rounded,
+                        size: 13,
+                        color: c.muted,
+                      ),
+                    ],
                     if (tag != null) ...[
                       const SizedBox(width: 8),
                       Container(

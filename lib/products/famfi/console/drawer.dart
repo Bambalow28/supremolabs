@@ -604,6 +604,8 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
       billId: widget.transaction?.billId,
       paydayId: widget.transaction?.paydayId,
       by: _by,
+      note: widget.transaction?.note,
+      receipt: widget.transaction?.receipt,
     );
     if (_editing) {
       await store.updateTransaction(tx);
@@ -724,6 +726,46 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
                 setState(() => _by = i == 0 ? Owner.josh : Owner.judy),
           ),
         ),
+        if (widget.transaction?.note != null &&
+            widget.transaction!.note!.isNotEmpty)
+          DField(
+            label: 'Scanned items',
+            child: Text(widget.transaction!.note!, style: ff(13.5, color: c.ink)),
+          ),
+        if (widget.transaction?.receipt != null)
+          DField(
+            label: 'Receipt',
+            child: GestureDetector(
+              onTap: () => showDialog<void>(
+                context: context,
+                builder: (ctx) => FFPopIn(
+                  child: Dialog(
+                    backgroundColor: Colors.transparent,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: SizedBox(
+                        width: 480,
+                        height: 480,
+                        child: ReceiptImage(
+                          widget.store,
+                          widget.transaction!.receipt!,
+                          height: 480,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: ReceiptImage(
+                  widget.store,
+                  widget.transaction!.receipt!,
+                  height: 260,
+                ),
+              ),
+            ),
+          ),
         if (widget.transaction != null)
           OutlinedButton(
             onPressed: () => _confirm(
