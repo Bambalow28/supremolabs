@@ -120,13 +120,6 @@ class _LedgerPanelState extends State<LedgerPanel> {
         .where((t) => t.amount < 0)
         .fold(0.0, (s, t) => s + t.amount);
 
-    final byDay = <DateTime, List<Transaction>>{};
-    for (final t in filtered) {
-      final d = DateTime(t.date.year, t.date.month, t.date.day);
-      byDay.putIfAbsent(d, () => []).add(t);
-    }
-    final days = byDay.keys.toList()..sort((a, b) => b.compareTo(a));
-
     if (widget.store.accounts.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(40),
@@ -142,12 +135,13 @@ class _LedgerPanelState extends State<LedgerPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+          Wrap(
+            spacing: 18,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
-                'Ledger',
+                'Transactions',
                 style: ff(
                   32,
                   weight: FontWeight.w800,
@@ -155,30 +149,31 @@ class _LedgerPanelState extends State<LedgerPanel> {
                   spacing: -1,
                 ),
               ),
-              const SizedBox(width: 14),
-              GestureDetector(
-                onTap: () => setState(
-                  () => _month = DateTime(_month.year, _month.month - 1),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: 20,
-                  color: c.muted,
-                ),
-              ),
-              Text(
-                '${_months[_month.month - 1]} ${_month.year}',
-                style: ff(15, color: c.muted),
-              ),
-              GestureDetector(
-                onTap: () => setState(
-                  () => _month = DateTime(_month.year, _month.month + 1),
-                ),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: c.muted,
-                ),
+              // Arrows and label share one centred row, so the year sits on
+              // the arrows' midline rather than the title's baseline.
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MonthArrow(
+                    icon: Icons.chevron_left_rounded,
+                    onTap: () => setState(
+                      () => _month = DateTime(_month.year, _month.month - 1),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      '${_months[_month.month - 1]} ${_month.year}',
+                      style: ff(15, color: c.muted),
+                    ),
+                  ),
+                  _MonthArrow(
+                    icon: Icons.chevron_right_rounded,
+                    onTap: () => setState(
+                      () => _month = DateTime(_month.year, _month.month + 1),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -245,10 +240,8 @@ class _LedgerPanelState extends State<LedgerPanel> {
                       },
                     ),
                     FilterPill(
-                      label: _byFilter == null
-                          ? 'Either of us'
-                          : _byFilter!.label,
-                      options: const ['Either of us', 'JOSH', 'JUDY'],
+                      label: _byFilter == null ? 'All' : _byFilter!.label,
+                      options: const ['All', 'Josh', 'Judy'],
                       selected: _byFilter == null
                           ? 0
                           : (_byFilter == Owner.josh ? 1 : 2),
@@ -269,13 +262,13 @@ class _LedgerPanelState extends State<LedgerPanel> {
                     children: [
                       const TextSpan(text: 'In '),
                       TextSpan(
-                        text: ffMoney(totalIn, sign: true),
+                        text: ffAmount(totalIn),
                         style: ff(13.5, weight: FontWeight.w700, color: c.good),
                       ),
                       const TextSpan(text: ' · Out '),
                       TextSpan(
-                        text: ffMoney(totalOut),
-                        style: ff(13.5, weight: FontWeight.w700, color: c.ink),
+                        text: ffAmount(totalOut),
+                        style: ff(13.5, weight: FontWeight.w700, color: c.bad),
                       ),
                     ],
                   ),
@@ -287,98 +280,79 @@ class _LedgerPanelState extends State<LedgerPanel> {
           const SizedBox(height: 16),
           Container(
             decoration: BoxDecoration(
-              color: c.surface,
+              border: Border.all(color: c.rule),
               borderRadius: BorderRadius.circular(16),
             ),
             clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                _EntryRow(
-                  store: widget.store,
-                  name: _entryName,
-                  amount: _entryAmount,
-                  accountId: _entryAccountId,
-                  onAccountChanged: (v) => setState(() => _entryAccountId = v),
-                  categoryId: _entryCategoryId,
-                  onCategoryChanged: (v) =>
-                      setState(() => _entryCategoryId = v),
-                  by: _entryBy,
-                  onByChanged: (v) => setState(() => _entryBy = v),
-                  date: _entryDate,
-                  onDateChanged: (v) => setState(() => _entryDate = v),
-                  negative: _entryNegative,
-                  onSignChanged: (v) => setState(() => _entryNegative = v),
-                  onSubmit: _addEntry,
-                ),
-                if (filtered.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      'No transactions yet — the entry row above adds your first.',
-                      style: ff(14, color: c.muted),
-                    ),
-                  )
-                else
-                  // Each day arrives as one beat, top day first.
-                  for (final (di, day) in days.indexed) ...[
-                    Reveal(
-                      index: di,
-                      child: _DayHeader(
-                        day: day,
-                        net: byDay[day]!.fold(0.0, (s, t) => s + t.amount),
-                      ),
-                    ),
-                    for (final t in byDay[day]!)
-                      Reveal(
-                        index: di,
-                        child: _TxRow(
-                          store: widget.store,
-                          tx: t,
-                          onTap: () => widget.openDrawer(
-                            TransactionDrawer(
-                              store: widget.store,
-                              transaction: t,
-                              onClose: widget.closeDrawer,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-              ],
+            child: _EntryRow(
+              store: widget.store,
+              name: _entryName,
+              amount: _entryAmount,
+              accountId: _entryAccountId,
+              onAccountChanged: (v) => setState(() => _entryAccountId = v),
+              categoryId: _entryCategoryId,
+              onCategoryChanged: (v) => setState(() => _entryCategoryId = v),
+              by: _entryBy,
+              onByChanged: (v) => setState(() => _entryBy = v),
+              date: _entryDate,
+              onDateChanged: (v) => setState(() => _entryDate = v),
+              negative: _entryNegative,
+              onSignChanged: (v) => setState(() => _entryNegative = v),
+              onSubmit: _addEntry,
             ),
           ),
+          const SizedBox(height: 14),
+          if (filtered.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                'No transactions yet — the entry row above adds your first.',
+                style: ff(14, color: c.muted),
+              ),
+            )
+          else
+            // One card per transaction, newest first, each sliding in on
+            // its own beat.
+            for (final (i, t) in filtered.indexed)
+              Reveal(
+                index: i,
+                child: _TxRow(
+                  store: widget.store,
+                  tx: t,
+                  onTap: () => widget.openDrawer(
+                    TransactionDrawer(
+                      store: widget.store,
+                      transaction: t,
+                      onClose: widget.closeDrawer,
+                    ),
+                  ),
+                ),
+              ),
         ],
       ),
     );
   }
 }
 
-class _DayHeader extends StatelessWidget {
-  final DateTime day;
-  final double net;
-  const _DayHeader({required this.day, required this.net});
+class _MonthArrow extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _MonthArrow({required this.icon, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-      alignment: Alignment.centerLeft,
-      child: Row(
-        children: [
-          Text(
-            ffDate(day),
-            style: ff(12.5, weight: FontWeight.w600, color: c.muted),
-          ),
-          const Spacer(),
-          Text(
-            ffMoney(net, sign: true),
-            style: ff(12.5, weight: FontWeight.w600, color: c.muted),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => InkResponse(
+    onTap: onTap,
+    radius: 18,
+    child: SizedBox(
+      width: 28,
+      height: 28,
+      child: Icon(icon, size: 20, color: context.c.muted),
+    ),
+  );
 }
 
 class _TxRow extends StatelessWidget {
@@ -393,111 +367,126 @@ class _TxRow extends StatelessWidget {
     final account = store.accounts
         .where((a) => a.id == tx.accountId)
         .firstOrNull;
-    final swatch = swatchFor(account?.color ?? 'graphite');
-    final tag = tx.billId != null
-        ? 'Bill'
-        : (tx.paydayId != null ? 'Payday' : null);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 96,
-                child: Text(ffDate(tx.date), style: ff(13, color: c.muted)),
-              ),
-              Expanded(
-                flex: 3,
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        tx.name,
-                        style: ff(14, color: c.ink),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (tx.receipt != null) ...[
-                      const SizedBox(width: 6),
-                      Icon(
-                        Icons.receipt_long_rounded,
-                        size: 13,
-                        color: c.muted,
-                      ),
-                    ],
-                    if (tag != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: c.fill,
-                          borderRadius: BorderRadius.circular(5),
-                        ),
+    final bill = tx.billId == null
+        ? null
+        : store.bills.where((b) => b.id == tx.billId).firstOrNull;
+    final category = bill != null || tx.categoryId == null
+        ? null
+        : store.categories.where((cc) => cc.id == tx.categoryId).firstOrNull;
+    // The app's own prefix: the bill's, else the category's, else the
+    // account's colour, with a payday / dollar glyph when neither has one.
+    final swatch = swatchFor(
+      bill?.color ?? category?.color ?? account?.color ?? 'graphite',
+    );
+    final icon = bill != null
+        ? iconFor(bill.icon)
+        : category != null
+        ? iconFor(category.icon)
+        : tx.paydayId != null
+        ? Icons.volunteer_activism_rounded
+        : Icons.attach_money_rounded;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: swatch.color,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 22, color: onSwatchIcon),
+                ),
+                const SizedBox(width: 14),
+                SizedBox(
+                  width: 96,
+                  child: Text(ffDate(tx.date), style: ff(13, color: c.muted)),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Row(
+                    children: [
+                      Flexible(
                         child: Text(
-                          tag,
-                          style: ff(
-                            10.5,
-                            weight: FontWeight.w600,
-                            color: c.muted,
-                          ),
+                          tx.name,
+                          style: ff(15, weight: FontWeight.w600, color: c.ink),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      if (tx.receipt != null) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.receipt_long_rounded,
+                          size: 14,
+                          color: c.muted,
+                        ),
+                      ],
+                      if (tx.link != null) ...[
+                        const SizedBox(width: 6),
+                        Icon(Icons.link_rounded, size: 15, color: c.muted),
+                      ],
                     ],
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        color: swatch.color,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: Text(
-                        account?.name ?? '—',
-                        style: ff(13, color: c.ink),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text(
-                  categoryLabel(store, tx.categoryId),
-                  style: ff(13, color: c.muted),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              SizedBox(width: 60, child: FFStamp(tx.by.label, color: c.muted)),
-              SizedBox(
-                width: 100,
-                child: Text(
-                  ffMoney(tx.amount, sign: true),
-                  textAlign: TextAlign.right,
-                  style: ff(
-                    14.5,
-                    weight: FontWeight.w700,
-                    color: tx.amount > 0 ? c.good : c.ink,
                   ),
                 ),
-              ),
-            ],
+                Expanded(
+                  flex: 2,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: swatchFor(account?.color ?? 'graphite').color,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          account?.name ?? '—',
+                          style: ff(13, color: c.ink),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    categoryLabel(store, tx.categoryId),
+                    style: ff(13, color: c.muted),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                SizedBox(
+                  width: 72,
+                  child: Center(child: FFStamp(tx.by.label, color: c.muted)),
+                ),
+                SizedBox(
+                  width: 100,
+                  child: Text(
+                    ffAmount(tx.amount),
+                    textAlign: TextAlign.right,
+                    style: ff(
+                      15,
+                      weight: FontWeight.w700,
+                      color: tx.amount > 0 ? c.good : c.bad,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -615,9 +604,9 @@ class _EntryRow extends StatelessWidget {
       ),
     );
     final signField = SizedBox(
-      width: 76,
+      width: 160,
       child: SegmentedTabs(
-        labels: const ['−', '+'],
+        labels: const ['Spent', 'Received'],
         selected: negative ? 0 : 1,
         onChanged: (i) => onSignChanged(i == 0),
       ),

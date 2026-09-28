@@ -37,13 +37,19 @@ void scrollToSection(GlobalKey key) {
 class SLPage extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
-  const SLPage({super.key, required this.child, this.padding});
+  final double maxWidth;
+  const SLPage({
+    super.key,
+    required this.child,
+    this.padding,
+    this.maxWidth = slMaxContentWidth,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: slMaxContentWidth),
+        constraints: BoxConstraints(maxWidth: maxWidth),
         child: Padding(
           padding: padding ?? const EdgeInsets.symmetric(horizontal: 24),
           child: child,
@@ -57,11 +63,19 @@ class SLPage extends StatelessWidget {
 /// divider, tinted [color].
 class SLRule extends StatelessWidget {
   final Color color;
-  const SLRule({super.key, this.color = SLColors.hairline});
+  final double maxWidth;
+  const SLRule({
+    super.key,
+    this.color = SLColors.hairline,
+    this.maxWidth = slMaxContentWidth,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return SLPage(child: Divider(color: color, height: 1, thickness: 1));
+    return SLPage(
+      maxWidth: maxWidth,
+      child: Divider(color: color, height: 1, thickness: 1),
+    );
   }
 }
 
@@ -84,11 +98,16 @@ class SiteShell extends StatefulWidget {
   /// (which only shows on the root page). Null leaves that slot empty.
   final Widget? trailing;
 
+  /// Measure of the nav, rule and footer. A wide desk page passes its own
+  /// width so the chrome's edges line up with its content's.
+  final double maxWidth;
+
   const SiteShell({
     super.key,
     required this.children,
     this.ground,
     this.trailing,
+    this.maxWidth = slMaxContentWidth,
   });
 
   @override
@@ -118,14 +137,14 @@ class _SiteShellState extends State<SiteShell> {
           children: [
             SizedBox(
               width: double.infinity,
-              child: _Nav(trailing: widget.trailing),
+              child: _Nav(trailing: widget.trailing, maxWidth: widget.maxWidth),
             ),
-            SLRule(color: line),
+            SLRule(color: line, maxWidth: widget.maxWidth),
             ...widget.children,
             Container(
               color: bodyGround,
               width: double.infinity,
-              child: _Footer(line: line),
+              child: _Footer(line: line, maxWidth: widget.maxWidth),
             ),
           ],
         ),
@@ -136,7 +155,8 @@ class _SiteShellState extends State<SiteShell> {
 
 class _Nav extends StatelessWidget {
   final Widget? trailing;
-  const _Nav({this.trailing});
+  final double maxWidth;
+  const _Nav({this.trailing, required this.maxWidth});
 
   @override
   Widget build(BuildContext context) {
@@ -146,6 +166,7 @@ class _Nav extends StatelessWidget {
     final accent = lineInk(product?.accent ?? SLColors.accent);
 
     return SLPage(
+      maxWidth: maxWidth,
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -198,12 +219,14 @@ class _Nav extends StatelessWidget {
 /// not a dead end.
 class _Footer extends StatelessWidget {
   final Color line;
-  const _Footer({required this.line});
+  final double maxWidth;
+  const _Footer({required this.line, required this.maxWidth});
 
   @override
   Widget build(BuildContext context) {
     final here = productForPath(ModalRoute.of(context)?.settings.name);
     return SLPage(
+      maxWidth: maxWidth,
       padding: const EdgeInsets.fromLTRB(24, 40, 24, 48),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,9 +264,7 @@ class _NodeLink extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = lineInk(product.accent ?? SLColors.inkMuted);
     return Hover(
-      onTap: current
-          ? null
-          : () => context.push(product.route!),
+      onTap: current ? null : () => context.push(product.route!),
       builder: (context, hovered) {
         final lit = hovered || current;
         return Row(

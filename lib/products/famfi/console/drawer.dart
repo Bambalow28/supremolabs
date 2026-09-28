@@ -3,6 +3,7 @@
 // JuwaStore API the phone editors use — no full-screen Scaffold, since these
 // live inside a 440px panel.
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
 import 'package:juwa_wealth/ui/bills/bills_screen.dart' show freqLabel;
@@ -470,11 +471,11 @@ class _AccountDrawerState extends State<AccountDrawer> {
                                     ),
                                   ),
                                   Text(
-                                    ffMoney(t.amount, sign: true),
+                                    ffAmount(t.amount),
                                     style: ff(
                                       13.5,
                                       weight: FontWeight.w700,
-                                      color: t.amount > 0 ? c.good : c.ink,
+                                      color: t.amount > 0 ? c.good : c.bad,
                                     ),
                                   ),
                                 ],
@@ -541,6 +542,12 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
   late final _name = TextEditingController(
     text: widget.transaction?.name ?? '',
   );
+  late final _note = TextEditingController(
+    text: widget.transaction?.note ?? '',
+  );
+  late final _link = TextEditingController(
+    text: widget.transaction?.link ?? '',
+  );
   late bool _received =
       widget.transaction != null && widget.transaction!.amount > 0;
   late String? _accountId =
@@ -556,7 +563,14 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
   void dispose() {
     _amount.dispose();
     _name.dispose();
+    _note.dispose();
+    _link.dispose();
     super.dispose();
+  }
+
+  Future<void> _pasteLink() async {
+    final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
+    if (text != null && text.isNotEmpty) setState(() => _link.text = text);
   }
 
   Future<void> _pickAccount() async {
@@ -610,9 +624,9 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
       billId: widget.transaction?.billId,
       paydayId: widget.transaction?.paydayId,
       by: _by,
-      note: widget.transaction?.note,
+      note: _note.text.trim().isEmpty ? null : _note.text.trim(),
       receipt: widget.transaction?.receipt,
-      link: widget.transaction?.link,
+      link: _link.text.trim().isEmpty ? null : _link.text.trim(),
     );
     if (_editing) {
       await store.updateTransaction(tx);
@@ -652,29 +666,17 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
             'Written automatically — editing amount/account may drift from what it records.',
             style: ff(12, color: c.warn),
           ),
+        SegmentedTabs(
+          labels: const ['Spent', 'Received'],
+          selected: _received ? 1 : 0,
+          onChanged: (i) => setState(() => _received = i == 1),
+        ),
         DField(
           label: 'Amount',
-          child: Row(
-            children: [
-              // SegmentedTabs stretches its segments to the width it gets;
-              // unsized in a Row that's none, which crushed both to a sliver.
-              SizedBox(
-                width: 96,
-                child: SegmentedTabs(
-                  labels: const ['−', '+'],
-                  selected: _received ? 1 : 0,
-                  onChanged: (i) => setState(() => _received = i == 1),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: AmountField(
-                  controller: _amount,
-                  fontSize: 18,
-                  onChanged: (_) => setState(() {}),
-                ),
-              ),
-            ],
+          child: AmountField(
+            controller: _amount,
+            fontSize: 18,
+            onChanged: (_) => setState(() {}),
           ),
         ),
         DField(
@@ -733,32 +735,55 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
                 setState(() => _by = i == 0 ? Owner.josh : Owner.judy),
           ),
         ),
-        if (widget.transaction?.note != null &&
-            widget.transaction!.note!.isNotEmpty)
-          DField(
-            label: 'Scanned items',
-            child: Text(widget.transaction!.note!, style: ff(13.5, color: c.ink)),
+        DField(
+          label: 'Note',
+          child: TextField(
+            controller: _note,
+            maxLines: 3,
+            minLines: 1,
+            style: ff(14, color: c.ink),
           ),
-        if (widget.transaction?.link != null)
-          DField(
-            label: 'Order link',
-            child: GestureDetector(
-              onTap: () => launchUrl(
-                Uri.parse(_normalizedLink(widget.transaction!.link!)),
-                webOnlyWindowName: '_blank',
-              ),
-              child: Text(
-                widget.transaction!.link!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: ff(
-                  13.5,
-                  color: FFColors.accentInk,
-                  weight: FontWeight.w600,
-                ),
+        ),
+        DField(
+          label: 'Order link',
+          child: TextField(
+            controller: _link,
+            autocorrect: false,
+            keyboardType: TextInputType.url,
+            style: ff(14, color: c.ink),
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'Amazon order page, store link…',
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_link.text.trim().isNotEmpty)
+                    IconButton(
+                      tooltip: 'Open',
+                      icon: Icon(
+                        Icons.open_in_new_rounded,
+                        size: 18,
+                        color: FFColors.accentInk,
+                      ),
+                      onPressed: () => launchUrl(
+                        Uri.parse(_normalizedLink(_link.text.trim())),
+                        webOnlyWindowName: '_blank',
+                      ),
+                    ),
+                  IconButton(
+                    tooltip: 'Paste',
+                    icon: Icon(
+                      Icons.content_paste_rounded,
+                      size: 18,
+                      color: c.muted,
+                    ),
+                    onPressed: _pasteLink,
+                  ),
+                ],
               ),
             ),
           ),
+        ),
         if (widget.transaction?.receipt != null)
           DField(
             label: 'Receipt',

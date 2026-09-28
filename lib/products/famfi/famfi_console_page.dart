@@ -18,8 +18,7 @@ import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
 import 'package:juwa_wealth/sync.dart';
 import 'package:juwa_wealth/ui/common.dart' show SkeletonListCard;
-import 'package:juwa_wealth/widgets.dart'
-    show AmountField, SegmentedTabs, SkeletonBox;
+import 'package:juwa_wealth/widgets.dart' show AmountField, Reveal, SkeletonBox;
 
 import '../../app/site_shell.dart';
 import 'console/bills_panel.dart';
@@ -31,6 +30,8 @@ import 'console/ledger_panel.dart';
 import 'console/payday_panel.dart';
 import 'console/wallet_rail.dart';
 import 'ff_theme.dart';
+
+const _consoleWidth = 1280.0;
 
 class FamFiConsolePage extends StatefulWidget {
   const FamFiConsolePage({super.key});
@@ -106,14 +107,33 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
     if (mounted) setState(() => _hid = hid);
   }
 
+  /// Re-runs the household sync: fresh listeners, so the first snapshot is
+  /// read again rather than trusting the last one. Overlapping calls share
+  /// one run.
+  Future<void>? _refreshing;
+
+  Future<void> _refresh(JuwaStore store) => _refreshing ??= () async {
+    try {
+      final hid = _hid;
+      if (hid == null) return;
+      _sync?.stop();
+      _sync = HouseholdSync(store, hid);
+      await _sync!.start(importLocal: false);
+    } finally {
+      _refreshing = null;
+    }
+  }();
+
   @override
   Widget build(BuildContext context) {
     return SiteShell(
       ground: FFColors.ground,
+      // Nav and footer measure to the console, so their edges line up with it.
+      maxWidth: _consoleWidth,
       children: [
         Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1280),
+            constraints: const BoxConstraints(maxWidth: _consoleWidth),
             // Every state below (message, join card) reads context.c, not
             // just the console body — so the theme wraps them all.
             child: Theme(
@@ -182,7 +202,11 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
               switchOutCurve: Curves.easeIn,
               child: store.loading
                   ? const _ConsoleSkeleton(key: ValueKey('loading'))
-                  : FamFiConsoleBody(key: const ValueKey('body'), store: store),
+                  : FamFiConsoleBody(
+                      key: const ValueKey('body'),
+                      store: store,
+                      onRefresh: () => _refresh(store),
+                    ),
             ),
           );
         },
@@ -298,30 +322,39 @@ class _JoinCard extends StatefulWidget {
 }
 
 class _JoinCardState extends State<_JoinCard> {
-  Owner _owner = Owner.josh;
+  final _name = TextEditingController();
   final _code = TextEditingController();
   bool _busy = false;
   String? _error;
 
   @override
   void dispose() {
+    _name.dispose();
     _code.dispose();
     super.dispose();
   }
 
   Future<void> _join() async {
+    if (_name.text.trim().isEmpty) {
+      setState(() => _error = 'Enter your name first.');
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final hid = await Household.join(widget.uid, _owner, _code.text);
-      if (hid == null) {
+      final joined = await Household.join(
+        widget.uid,
+        _name.text.trim(),
+        _code.text,
+      );
+      if (joined == null) {
         setState(
           () => _error = 'That code is wrong or expired. Ask for a new one.',
         );
       } else {
-        widget.onJoined(hid, _owner);
+        widget.onJoined(joined.hid, joined.owner);
       }
     } catch (_) {
       setState(
@@ -354,11 +387,19 @@ class _JoinCardState extends State<_JoinCard> {
                 style: ff(13.5, color: c.muted),
               ),
               const SizedBox(height: 20),
-              SegmentedTabs(
-                labels: const ['Josh', 'Judy'],
-                selected: _owner == Owner.josh ? 0 : 1,
-                onChanged: (i) =>
-                    setState(() => _owner = i == 0 ? Owner.josh : Owner.judy),
+              TextField(
+                controller: _name,
+                textCapitalization: TextCapitalization.words,
+                style: ff(16, color: c.ink),
+                decoration: InputDecoration(
+                  hintText: 'Your name',
+                  filled: true,
+                  fillColor: c.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(11),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -415,7 +456,14 @@ class _JoinCardState extends State<_JoinCard> {
 
 class FamFiConsoleBody extends StatefulWidget {
   final JuwaStore store;
-  const FamFiConsoleBody({super.key, required this.store});
+
+  /// Re-reads the household from the server (the refresh button).
+  final Future<void> Function() onRefresh;
+  const FamFiConsoleBody({
+    super.key,
+    required this.store,
+    required this.onRefresh,
+  });
 
   @override
   State<FamFiConsoleBody> createState() => _ConsoleState();
@@ -424,7 +472,13 @@ class FamFiConsoleBody extends StatefulWidget {
 class _ConsoleState extends State<FamFiConsoleBody> {
   static const _owners = [Owner.josh, Owner.judy];
 
-  FFTab _tab = FFTab.payday;
+  // The tab rides in the URL (?tab=), so a reload lands back where you were.
+  FFTab _tab =
+      FFTab.values.asNameMap()[Uri.base.queryParameters['tab']] ?? FFTab.payday;
+  bool _railCollapsed = false;
+  // A reload is in flight: rail and panel show skeletons, then slide in.
+  bool _refreshing = false;
+  int _reloadSeq = 0;
   Owner? _ownerFilter;
   String? _selectedAccountId;
   Widget? _drawerChild;
@@ -473,9 +527,36 @@ class _ConsoleState extends State<FamFiConsoleBody> {
     super.dispose();
   }
 
+  /// Switches tab: keeps the URL in step and re-reads the data, skeleton
+  /// first, as the phone does on every tab change.
+  void _goTab(FFTab t) {
+    if (t == _tab) return;
+    setState(() => _tab = t);
+    SystemNavigator.routeInformationUpdated(
+      uri: Uri(path: '/famfi/personal', queryParameters: {'tab': t.name}),
+      replace: true,
+    );
+    _reload(() => widget.store.reload(), 380);
+  }
+
+  /// The refresh button: a full re-sync with the household, not just a
+  /// re-read of what's on this browser.
+  void _refreshAll() => _reload(widget.onRefresh, 650);
+
+  Future<void> _reload(Future<void> Function() load, int minMs) async {
+    final seq = ++_reloadSeq;
+    setState(() => _refreshing = true);
+    await Future.wait([
+      load().catchError((Object _) {}),
+      Future<void>.delayed(Duration(milliseconds: minMs)),
+    ]);
+    // Only the latest reload ends the skeleton.
+    if (mounted && seq == _reloadSeq) setState(() => _refreshing = false);
+  }
+
   void _onSearchChanged() {
     if (_search.text.isNotEmpty && _tab != FFTab.ledger) {
-      setState(() => _tab = FFTab.ledger);
+      _goTab(FFTab.ledger);
     } else {
       setState(() {});
     }
@@ -517,7 +598,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
     };
     final mapped = digitTabs[event.logicalKey];
     if (mapped != null) {
-      setState(() => _tab = mapped);
+      _goTab(mapped);
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.keyN) {
@@ -650,7 +731,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
   }
 
   void _onOpenBillFromNotification(Bill bill) {
-    setState(() => _tab = FFTab.bills);
+    _goTab(FFTab.bills);
     openDrawer(
       BillDrawer(store: widget.store, bill: bill, onClose: closeDrawer),
     );
@@ -712,12 +793,13 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                       ConsoleHeader(
                                         store: store,
                                         tab: _tab,
-                                        onTabChanged: (t) =>
-                                            setState(() => _tab = t),
+                                        onTabChanged: _goTab,
                                         search: _search,
                                         searchFocus: _searchFocus,
                                         onNew: _newForTab,
                                         onOpenBill: _onOpenBillFromNotification,
+                                        onRefresh: _refreshAll,
+                                        refreshing: _refreshing,
                                       ),
                                       WalletRail(
                                         store: store,
@@ -734,6 +816,12 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                         ),
                                         deltas: deltas,
                                         compact: compact,
+                                        collapsed: _railCollapsed,
+                                        loading: _refreshing,
+                                        onToggle: () => setState(
+                                          () =>
+                                              _railCollapsed = !_railCollapsed,
+                                        ),
                                       ),
                                       Expanded(child: panel),
                                     ],
@@ -757,6 +845,12 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                         ),
                                         deltas: deltas,
                                         compact: compact,
+                                        collapsed: _railCollapsed,
+                                        loading: _refreshing,
+                                        onToggle: () => setState(
+                                          () =>
+                                              _railCollapsed = !_railCollapsed,
+                                        ),
                                       ),
                                       Expanded(
                                         child: Column(
@@ -766,13 +860,14 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                             ConsoleHeader(
                                               store: store,
                                               tab: _tab,
-                                              onTabChanged: (t) =>
-                                                  setState(() => _tab = t),
+                                              onTabChanged: _goTab,
                                               search: _search,
                                               searchFocus: _searchFocus,
                                               onNew: _newForTab,
                                               onOpenBill:
                                                   _onOpenBillFromNotification,
+                                              onRefresh: _refreshAll,
+                                              refreshing: _refreshing,
                                             ),
                                             Expanded(child: panel),
                                           ],
@@ -850,7 +945,13 @@ class _ConsoleState extends State<FamFiConsoleBody> {
           ),
         );
       },
-      child: KeyedSubtree(key: ValueKey(_tab), child: panel),
+      child: KeyedSubtree(
+        key: ValueKey('${_tab.name}${_refreshing ? '·loading' : ''}'),
+        // Data arrives as a slide-and-fade; inner lists stagger on top.
+        child: _refreshing
+            ? const _PanelSkeleton()
+            : Reveal(index: 0, slide: 14, durationMs: 420, child: panel),
+      ),
     );
   }
 
@@ -898,4 +999,22 @@ class _ConsoleState extends State<FamFiConsoleBody> {
         );
     }
   }
+}
+
+/// A panel's shape while its data reloads: title, then a stack of cards.
+class _PanelSkeleton extends StatelessWidget {
+  const _PanelSkeleton();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.fromLTRB(40, 4, 40, 0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SkeletonBox(width: 200, height: 34),
+        SizedBox(height: 24),
+        SkeletonListCard(rows: 6),
+      ],
+    ),
+  );
 }

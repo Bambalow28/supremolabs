@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:juwa_wealth/theme.dart';
+import 'package:juwa_wealth/widgets.dart' show BalanceChip;
 
 export 'package:juwa_wealth/theme.dart';
 
@@ -92,12 +93,15 @@ final _date = DateFormat('EEE, MMM d');
 /// `Fri, Sep 25` — the app's date style everywhere on the console.
 String ffDate(DateTime d) => _date.format(d);
 
-/// `$1,234.56`, `−$12.30`, or `+$5.00` with [sign]. Minus is U+2212.
-String ffMoney(double v, {bool sign = false}) {
+/// `$1,234.56` or `−$12.30`. Minus is U+2212.
+String ffMoney(double v) {
   final s = _money.format(v.abs());
-  if (v < 0) return '−$s';
-  return sign && v > 0 ? '+$s' : s;
+  return v < 0 ? '−$s' : s;
 }
+
+/// `$12.30` for any [v] — direction is carried by [moneyColor] (green in
+/// hand, red owed, grey at zero), never by a +/− sign, as in the app.
+String ffAmount(double v) => _money.format(v.abs());
 
 /// The JOSH / JUDY / JOINT (or HIS / HERS) stamp, as on the app's cards.
 class FFStamp extends StatelessWidget {
@@ -207,29 +211,14 @@ class FFCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          // Capped so a wide balance (e.g. a large negative "owed" figure)
-          // can't starve the name/kind column down to nothing on a narrow
-          // card — this is the tightest spot the compact wallet rail hits.
+          // Capped so a wide balance can't starve the name/kind column on a
+          // narrow card; the app's chip reads on every swatch.
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 96),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  ffMoney(balance),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: ff(17, weight: FontWeight.w800, color: on),
-                ),
-                if (balance < 0)
-                  Text(
-                    'owed',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: ff(11.5, color: on.withValues(alpha: .8)),
-                  ),
-              ],
+            constraints: const BoxConstraints(maxWidth: 104),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: BalanceChip(balance: balance, size: 14),
             ),
           ),
         ],
@@ -269,11 +258,11 @@ class FFCard extends StatelessWidget {
                   border: Border.all(color: context.c.rule),
                 ),
                 child: Text(
-                  ffMoney(delta!, sign: true),
+                  ffAmount(delta!),
                   style: ff(
                     11.5,
                     weight: FontWeight.w700,
-                    color: context.c.good,
+                    color: moneyColor(delta!),
                   ),
                 ),
               ),

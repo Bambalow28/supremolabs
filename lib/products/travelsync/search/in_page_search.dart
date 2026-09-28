@@ -447,11 +447,7 @@ class _PlaceRow extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(
-            Icons.north_east_rounded,
-            size: 15,
-            color: Colors.white24,
-          ),
+          const Icon(Icons.north_east_rounded, size: 15, color: Colors.white24),
         ],
       ),
     );

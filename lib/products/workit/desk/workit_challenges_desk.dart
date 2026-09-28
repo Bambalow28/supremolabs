@@ -84,7 +84,9 @@ class _WorkItChallengesDeskState extends State<WorkItChallengesDesk> {
             const SizedBox(height: 36),
             Row(
               children: [
-                Expanded(child: _Head('READY TO FINALIZE', readyToFinalize.length)),
+                Expanded(
+                  child: _Head('READY TO FINALIZE', readyToFinalize.length),
+                ),
                 _ShowAllToggle(
                   value: _showAll,
                   onChanged: (v) => setState(() => _showAll = v),
@@ -152,8 +154,18 @@ bool _pastFinalizeWindow(Map<String, dynamic> data, DateTime now) {
 String _fmtDate(DateTime? d) {
   if (d == null) return '—';
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return '${months[d.month - 1]} ${d.day}';
 }
@@ -332,7 +344,12 @@ class _DeskButton extends StatelessWidget {
         ),
         child: Text(
           busy ? 'Working…' : label,
-          style: wiText(12, weight: FontWeight.w600, color: Colors.white, letterSpacing: 1),
+          style: wiText(
+            12,
+            weight: FontWeight.w600,
+            color: Colors.white,
+            letterSpacing: 1,
+          ),
         ),
       );
     }
@@ -407,7 +424,8 @@ class _PendingCardState extends State<_PendingCard> {
     final prizes = (widget.doc.data()['prizes'] as List?) ?? const [];
     _prizeControllers = List.generate(
       3,
-      (i) => TextEditingController(text: i < prizes.length ? '${prizes[i]}' : ''),
+      (i) =>
+          TextEditingController(text: i < prizes.length ? '${prizes[i]}' : ''),
     );
   }
 
@@ -490,7 +508,10 @@ class _PendingCardState extends State<_PendingCard> {
         ),
         if (summary.isNotEmpty) ...[
           const SizedBox(height: 10),
-          Text(summary, style: wiText(13.5, color: WIColors.inkMuted, height: 1.4)),
+          Text(
+            summary,
+            style: wiText(13.5, color: WIColors.inkMuted, height: 1.4),
+          ),
         ],
         const SizedBox(height: 14),
         Row(
@@ -526,7 +547,12 @@ class _PendingCardState extends State<_PendingCard> {
       children: [
         Text(
           'PRIZES',
-          style: wiText(11, weight: FontWeight.w600, letterSpacing: 1.6, color: WIColors.inkFaint),
+          style: wiText(
+            11,
+            weight: FontWeight.w600,
+            letterSpacing: 1.6,
+            color: WIColors.inkFaint,
+          ),
         ),
         const SizedBox(height: 10),
         for (var i = 0; i < 3; i++)
@@ -550,7 +576,10 @@ class _PendingCardState extends State<_PendingCard> {
                       isDense: true,
                       hintText: 'Prize for ${['1st', '2nd', '3rd'][i]}',
                       hintStyle: wiText(13, color: WIColors.inkFaint),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 10,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.zero,
                         borderSide: const BorderSide(color: WIColors.rule),
@@ -724,14 +753,19 @@ class _FinalizeCardState extends State<_FinalizeCard> {
     setState(() => _loading = true);
     try {
       final snap = await widget.doc.reference.collection('participants').get();
-      final lengthDays = (widget.doc.data()['lengthDays'] as num?)?.toInt() ?? 0;
+      final lengthDays =
+          (widget.doc.data()['lengthDays'] as num?)?.toInt() ?? 0;
       final vms = await Future.wait(
         snap.docs.map((p) async {
           final dayZero = p.data()['dayZero'] as Timestamp?;
           final days = await p.reference.collection('days').get();
           final flags = dayZero == null
               ? const <String>[]
-              : _computeFlags(dayZero: dayZero, lengthDays: lengthDays, days: days.docs);
+              : _computeFlags(
+                  dayZero: dayZero,
+                  lengthDays: lengthDays,
+                  days: days.docs,
+                );
           return _ParticipantVM(uid: p.id, data: p.data(), flags: flags);
         }),
       );
@@ -898,7 +932,9 @@ List<String> _computeFlags({
     }
   }
   if (shortSessions > 0) {
-    flags.add('$shortSessions session${shortSessions == 1 ? '' : 's'} under 10 min');
+    flags.add(
+      '$shortSessions session${shortSessions == 1 ? '' : 's'} under 10 min',
+    );
   }
 
   var streak = 0;
@@ -930,7 +966,9 @@ List<String> _computeFlags({
     }
   });
   if (lastMinuteSyncs >= 3) {
-    flags.add('$lastMinuteSyncs days synced in the last 10 min of their window');
+    flags.add(
+      '$lastMinuteSyncs days synced in the last 10 min of their window',
+    );
   }
 
   return flags;
@@ -997,7 +1035,11 @@ class _ParticipantRow extends StatelessWidget {
               width: 150,
               child: Text(
                 _fmtDateTime(reachedAt),
-                style: wiText(12, color: WIColors.inkFaint, tabularFigures: true),
+                style: wiText(
+                  12,
+                  color: WIColors.inkFaint,
+                  tabularFigures: true,
+                ),
               ),
             ),
           Expanded(
@@ -1038,7 +1080,9 @@ class _FinalCard extends StatelessWidget {
       return _Card(
         child: Row(
           children: [
-            Expanded(child: Text(title, style: wiText(16, weight: FontWeight.w700))),
+            Expanded(
+              child: Text(title, style: wiText(16, weight: FontWeight.w700)),
+            ),
             Text('Finalizing…', style: wiText(12, color: WIColors.inkFaint)),
           ],
         ),
@@ -1051,7 +1095,8 @@ class _FinalCard extends StatelessWidget {
         builder: (context, resultSnap) {
           final results = resultSnap.data?.data();
           final top = (results?['top'] as List?) ?? const [];
-          final participantCount = (results?['participantCount'] as num?)?.toInt() ?? 0;
+          final participantCount =
+              (results?['participantCount'] as num?)?.toInt() ?? 0;
 
           return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: workItDb
@@ -1069,7 +1114,12 @@ class _FinalCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: Text(title, style: wiText(17, weight: FontWeight.w700))),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: wiText(17, weight: FontWeight.w700),
+                        ),
+                      ),
                       Text(
                         '$participantCount finished',
                         style: wiText(12, color: WIColors.inkFaint),
@@ -1078,7 +1128,10 @@ class _FinalCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
                   if (top.isEmpty)
-                    Text('No results yet.', style: wiText(13, color: WIColors.inkFaint))
+                    Text(
+                      'No results yet.',
+                      style: wiText(13, color: WIColors.inkFaint),
+                    )
                   else
                     for (var i = 0; i < top.length; i++)
                       _ResultRow(
@@ -1126,7 +1179,10 @@ class _ResultRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 22, child: Text('$rank', style: wiText(13, color: WIColors.inkFaint))),
+          SizedBox(
+            width: 22,
+            child: Text('$rank', style: wiText(13, color: WIColors.inkFaint)),
+          ),
           Expanded(
             flex: 2,
             child: Column(

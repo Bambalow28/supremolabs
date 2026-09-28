@@ -26,20 +26,10 @@ class BudgetPanel extends StatefulWidget {
 }
 
 class _BudgetPanelState extends State<BudgetPanel> {
-  final _afford = TextEditingController();
-
-  @override
-  void dispose() {
-    _afford.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     final store = widget.store;
-    final amount = AmountField.parse(_afford.text);
-    final result = amount == null ? null : store.affordability(amount);
     final spentAll = store.budgets.fold(0.0, (s, b) => s + store.spentNow(b));
     final targetAll = store.budgets.fold(0.0, (s, b) => s + b.monthlyTarget);
 
@@ -49,8 +39,6 @@ class _BudgetPanelState extends State<BudgetPanel> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
                 'Budget',
@@ -89,47 +77,37 @@ class _BudgetPanelState extends State<BudgetPanel> {
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
+                )
+              else
+                const Spacer(),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => FFPopIn(child: _AffordDialog(store: store)),
                 ),
+                icon: const Icon(Icons.help_outline_rounded, size: 18),
+                label: const Text('Can we afford it?'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: c.ink,
+                  side: BorderSide(color: c.rule),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (context, cons) {
-              final stacked = cons.maxWidth < 820;
-              final table = _Table(
+          _Table(
+            store: store,
+            onOpen: (b) => widget.openDrawer(
+              BudgetDrawer(
                 store: store,
-                onOpen: (b) => widget.openDrawer(
-                  BudgetDrawer(
-                    store: store,
-                    budget: b,
-                    onClose: widget.closeDrawer,
-                  ),
-                ),
-                onAddNew: () => widget.openDrawer(
-                  BudgetDrawer(store: store, onClose: widget.closeDrawer),
-                ),
-              );
-              final afford = _Afford(
-                controller: _afford,
-                onChanged: () => setState(() {}),
-                result: result,
-              );
-              if (stacked) {
-                return Column(
-                  children: [table, const SizedBox(height: 24), afford],
-                );
-              }
-              return IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: table),
-                    const SizedBox(width: 24),
-                    SizedBox(width: 340, child: afford),
-                  ],
-                ),
-              );
-            },
+                budget: b,
+                onClose: widget.closeDrawer,
+              ),
+            ),
+            onAddNew: () => widget.openDrawer(
+              BudgetDrawer(store: store, onClose: widget.closeDrawer),
+            ),
           ),
         ],
       ),
@@ -360,78 +338,106 @@ class _BudgetRow extends StatelessWidget {
   }
 }
 
-class _Afford extends StatelessWidget {
-  final TextEditingController controller;
-  final VoidCallback onChanged;
-  final AffordabilityResult? result;
-  const _Afford({
-    required this.controller,
-    required this.onChanged,
-    required this.result,
-  });
+/// "Can we afford it?" — a one-off check, so it lives in a dialog rather than
+/// taking a column off the category table.
+class _AffordDialog extends StatefulWidget {
+  final JuwaStore store;
+  const _AffordDialog({required this.store});
+
+  @override
+  State<_AffordDialog> createState() => _AffordDialogState();
+}
+
+class _AffordDialogState extends State<_AffordDialog> {
+  final _amount = TextEditingController();
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Can we afford it?',
-            style: ff(17, weight: FontWeight.w800, color: c.ink, spacing: -0.3),
-          ),
-          const SizedBox(height: 14),
-          ffRaisedFields(
-            context,
-            AmountField(
-              controller: controller,
-              fontSize: 22,
-              onChanged: (_) => onChanged(),
-            ),
-          ),
-          if (result != null) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: (result!.affordable ? c.good : c.bad).withValues(
-                  alpha: 0.12,
+    final amt = AmountField.parse(_amount.text);
+    final result = amt == null ? null : widget.store.affordability(amt);
+    return Dialog(
+      backgroundColor: c.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 380),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Can we afford it?',
+                style: ff(
+                  20,
+                  weight: FontWeight.w800,
+                  color: c.ink,
+                  spacing: -0.3,
                 ),
-                borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    result!.affordable
-                        ? Icons.check_circle_rounded
-                        : Icons.cancel_rounded,
-                    size: 18,
-                    color: result!.affordable ? c.good : c.bad,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      result!.affordable
-                          ? 'Yes, it fits'
-                          : 'No — short ${ffMoney(result!.shortfall)}',
-                      style: ff(
-                        14,
-                        weight: FontWeight.w600,
-                        color: result!.affordable ? c.good : c.bad,
-                      ),
+              const SizedBox(height: 16),
+              ffRaisedFields(
+                context,
+                AmountField(
+                  controller: _amount,
+                  fontSize: 22,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              if (result != null) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: (result.affordable ? c.good : c.bad).withValues(
+                      alpha: 0.12,
                     ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
+                  child: Row(
+                    children: [
+                      Icon(
+                        result.affordable
+                            ? Icons.check_circle_rounded
+                            : Icons.cancel_rounded,
+                        size: 18,
+                        color: result.affordable ? c.good : c.bad,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          result.affordable
+                              ? 'Yes, it fits'
+                              : 'No — short ${ffAmount(result.shortfall)}',
+                          style: ff(
+                            14,
+                            weight: FontWeight.w600,
+                            color: result.affordable ? c.good : c.bad,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
               ),
-            ),
-          ],
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

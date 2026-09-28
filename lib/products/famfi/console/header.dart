@@ -16,6 +16,8 @@ class ConsoleHeader extends StatelessWidget {
   final FocusNode searchFocus;
   final VoidCallback onNew;
   final void Function(Bill bill) onOpenBill;
+  final VoidCallback onRefresh;
+  final bool refreshing;
 
   const ConsoleHeader({
     super.key,
@@ -26,6 +28,8 @@ class ConsoleHeader extends StatelessWidget {
     required this.searchFocus,
     required this.onNew,
     required this.onOpenBill,
+    required this.onRefresh,
+    this.refreshing = false,
   });
 
   @override
@@ -39,30 +43,43 @@ class ConsoleHeader extends StatelessWidget {
     // first thing to go: meaningless on a touch tablet anyway.
     return LayoutBuilder(
       builder: (context, cons) {
-        final tight = cons.maxWidth < 820;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(40, 18, 40, 14),
+        final tight = cons.maxWidth < 900;
+        return Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: c.rule)),
+          ),
           child: Row(
             children: [
-              for (final t in FFTab.values)
-                Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: _TabButton(
-                    label: switch (t) {
-                      FFTab.ledger => 'Ledger',
-                      FFTab.bills => 'Bills',
-                      FFTab.payday => 'Payday',
-                      FFTab.budget => 'Budget',
-                    },
-                    shortcut: '${FFTab.values.indexOf(t) + 1}',
-                    showShortcut: !tight,
-                    selected: tab == t,
-                    onTap: () => onTabChanged(t),
+              // Tabs scroll rather than overflow when the row runs short.
+              Flexible(
+                flex: 3,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final t in FFTab.values)
+                        _TabButton(
+                          label: switch (t) {
+                            FFTab.ledger => 'Transactions',
+                            FFTab.bills => 'Bills',
+                            FFTab.payday => 'Payday',
+                            FFTab.budget => 'Budget',
+                          },
+                          compact: tight,
+                          selected: tab == t,
+                          onTap: () => onTabChanged(t),
+                        ),
+                    ],
                   ),
                 ),
+              ),
+              const SizedBox(width: 16),
               // Expanded + right-aligned (not Spacer + Flexible, which split the
               // free space in half and crushed the field at mid widths).
               Expanded(
+                flex: 2,
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: ConstrainedBox(
@@ -104,6 +121,8 @@ class ConsoleHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
+              _RefreshButton(onTap: onRefresh, spinning: refreshing),
+              const SizedBox(width: 4),
               NotificationBell(store: store, onOpenBill: onOpenBill),
               const SizedBox(width: 8),
               tight
@@ -115,11 +134,7 @@ class ConsoleHeader extends StatelessWidget {
                         customBorder: const CircleBorder(),
                         child: Padding(
                           padding: const EdgeInsets.all(9),
-                          child: Icon(
-                            Icons.add_rounded,
-                            size: 20,
-                            color: c.bg,
-                          ),
+                          child: Icon(Icons.add_rounded, size: 20, color: c.bg),
                         ),
                       ),
                     )
@@ -141,16 +156,15 @@ class ConsoleHeader extends StatelessWidget {
   }
 }
 
+/// A real tab: label over a 2px rule that fills with ink when selected.
 class _TabButton extends StatelessWidget {
   final String label;
-  final String shortcut;
-  final bool showShortcut;
+  final bool compact;
   final bool selected;
   final VoidCallback onTap;
   const _TabButton({
     required this.label,
-    required this.shortcut,
-    this.showShortcut = true,
+    required this.compact,
     required this.selected,
     required this.onTap,
   });
@@ -158,35 +172,82 @@ class _TabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Material(
-      color: selected ? c.surface : Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        height: 60,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 16),
+        alignment: Alignment.center,
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            Center(
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 180),
                 style: ff(
                   15,
                   weight: FontWeight.w700,
                   color: selected ? c.ink : c.faint,
                 ),
+                child: Text(label),
               ),
-              if (showShortcut) ...[
-                const SizedBox(width: 7),
-                _Kbd(shortcut),
-              ],
-            ],
-          ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                height: 2,
+                color: selected ? c.ink : Colors.transparent,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+class _RefreshButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final bool spinning;
+  const _RefreshButton({required this.onTap, required this.spinning});
+
+  @override
+  State<_RefreshButton> createState() => _RefreshButtonState();
+}
+
+class _RefreshButtonState extends State<_RefreshButton>
+    with SingleTickerProviderStateMixin {
+  late final _spin = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 800),
+  );
+
+  @override
+  void didUpdateWidget(_RefreshButton old) {
+    super.didUpdateWidget(old);
+    if (widget.spinning && !_spin.isAnimating) _spin.repeat();
+    if (!widget.spinning) _spin.stop();
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: 'Refresh everything',
+    onPressed: widget.spinning ? null : widget.onTap,
+    icon: RotationTransition(
+      turns: _spin,
+      child: Icon(Icons.refresh_rounded, size: 21, color: context.c.muted),
+    ),
+  );
 }
 
 class _Kbd extends StatelessWidget {

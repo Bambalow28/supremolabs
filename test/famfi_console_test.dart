@@ -13,7 +13,7 @@ import 'package:supremolabs/products/famfi/famfi_console_page.dart';
 // tests), same as juwa_wealth's own widget_test.dart tests Shell directly
 // rather than going through AuthGate.
 Future<Widget> _console() async =>
-    MaterialApp(home: Scaffold(body: FamFiConsoleBody(store: await JuwaStore.load())));
+    MaterialApp(home: Scaffold(body: FamFiConsoleBody(store: await JuwaStore.load(), onRefresh: () async {})));
 
 String d(String s) => '${s}T00:00:00.000';
 // Minimal household: enough to fill every tab's table/calendar.
@@ -134,9 +134,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('run payday'), findsOneWidget);
 
-    await tester.tap(find.text('Ledger'));
+    await tester.tap(find.text('Transactions'));
     await tester.pumpAndSettle();
-    expect(find.text('Ledger'), findsWidgets);
+    expect(find.text('Transactions'), findsWidgets);
 
     await tester.tap(find.text('Bills'));
     await tester.pumpAndSettle();
@@ -158,7 +158,7 @@ void main() {
     });
     await tester.pumpWidget(await _console());
     await tester.pumpAndSettle();
-    for (final tab in ['Ledger', 'Bills', 'Budget', 'Payday']) {
+    for (final tab in ['Transactions', 'Bills', 'Budget', 'Payday']) {
       await tester.tap(find.text(tab).first);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: '$tab tab');
@@ -181,7 +181,7 @@ void main() {
       });
       await tester.pumpWidget(await _console());
       await tester.pumpAndSettle();
-      for (final tab in ['Ledger', 'Bills', 'Budget', 'Payday']) {
+      for (final tab in ['Transactions', 'Bills', 'Budget', 'Payday']) {
         await tester.tap(find.text(tab).first);
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: '$tab tab at $size');
