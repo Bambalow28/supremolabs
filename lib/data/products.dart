@@ -17,6 +17,24 @@ enum Cluster {
   const Cluster(this.label, this.note);
 }
 
+/// The liner notes on a product's page: the problem it answers, and what it is
+/// to the person who built it. Worded from the founder's own account — nothing
+/// here is a metric or a testimonial.
+class Story {
+  final String problem;
+
+  /// The founder's line about the app.
+  final String mine;
+
+  /// Heading over [mine]: "In my day" only where the founder uses it daily.
+  final String mineLabel;
+  const Story({
+    required this.problem,
+    required this.mine,
+    this.mineLabel = 'In my day',
+  });
+}
+
 class Product {
   final String name;
   final String category;
@@ -42,6 +60,9 @@ class Product {
   /// typographically — never a stand-in screenshot.
   final String? screen;
 
+  /// Null for products without a page.
+  final Story? story;
+
   const Product({
     required this.name,
     required this.category,
@@ -51,6 +72,7 @@ class Product {
     this.ground,
     this.accent,
     this.screen,
+    this.story,
   });
 
   bool get live => route != null;
@@ -68,6 +90,12 @@ const products = <Product>[
     ground: Color(0xFF0B0C0E),
     accent: Color(0xFF4A9DFF), // WorkItColors.dark().tint
     screen: 'assets/workit/today.png',
+    story: Story(
+      problem: "Health tracking gets split across a dozen single-purpose apps.",
+      mine:
+          "It became my health hub — everything about my health tracking, in one place.",
+      mineLabel: 'In my day',
+    ),
   ),
   Product(
     name: 'TravelSync',
@@ -78,6 +106,11 @@ const products = <Product>[
     ground: Color(0xFF0B0F1A),
     accent: Color(0xFF4B76FA), // ts_colors.dart primaryBlue
     screen: 'assets/travelsync/home.png',
+    story: Story(
+      problem: "Trip photos and memories get buried in a camera roll.",
+      mine: "It keeps my memories from travel, as travel cards.",
+      mineLabel: 'In my day',
+    ),
   ),
   Product(
     name: 'PlanSync',
@@ -87,6 +120,12 @@ const products = <Product>[
     route: '/plansync',
     ground: Color(0xFF0A0E14),
     accent: Color(0xFF2DD4BF), // ps_colors.dart accent
+    story: Story(
+      problem:
+          "Trip plans end up scattered across emails, screenshots and notes.",
+      mine: "It simplified how I put a travel itinerary together.",
+      mineLabel: 'In my day',
+    ),
   ),
   Product(
     name: 'WealthSync',
@@ -97,6 +136,12 @@ const products = <Product>[
     ground: Color(0xFF1D1D1D),
     accent: Color(0xFF465C88), // ws_colors.dart toolColor
     screen: 'assets/wealthsync/main_page.png',
+    story: Story(
+      problem: "Money sits across accounts, apps and spreadsheets.",
+      mine:
+          "The goal is all-in-one finance management. It is still taking shape.",
+      mineLabel: 'Where it is headed',
+    ),
   ),
   Product(
     name: 'NoteSync',
@@ -106,6 +151,13 @@ const products = <Product>[
     route: '/notesync',
     ground: Color(0xFF000000),
     accent: Color(0xFF0A84FF), // ns_colors.dart accent
+    story: Story(
+      problem:
+          "Notes, habits, reminders and events usually live in separate apps.",
+      mine:
+          "My own flavour of note-taking — with habits, reminders and events alongside.",
+      mineLabel: 'In my day',
+    ),
   ),
   Product(
     name: 'Diamo',
@@ -115,6 +167,12 @@ const products = <Product>[
     route: '/diamo',
     ground: Color(0xFF1C1216),
     accent: Color(0xFF7A3145), // app_theme.dart diaMoTheme seed color
+    story: Story(
+      problem:
+          "Early motherhood is scattered across group chats, photos and notes.",
+      mine: "A hub for mothers.",
+      mineLabel: 'What it is for',
+    ),
   ),
   Product(
     name: 'Stanverse',
@@ -124,6 +182,12 @@ const products = <Product>[
     route: '/stanverse',
     ground: Color(0xFF0E0D10),
     accent: Color(0xFFF5F2EC), // stanverse_theme.dart StanTicker.paper
+    story: Story(
+      problem:
+          "Following an artist means chasing news, dates and merch across a dozen places.",
+      mine: "A place for following everything about an artist.",
+      mineLabel: 'What it is for',
+    ),
   ),
   Product(
     name: 'FamFi',
@@ -133,6 +197,12 @@ const products = <Product>[
     route: '/famfi',
     ground: Color(0xFF0C0E12), // juwa_wealth JuwaColors.dark().bg
     accent: Color(0xFF2E5BE8), // juwa_wealth swatch 'cobalt'
+    story: Story(
+      problem:
+          "Two people, shared bills, and no single view of the household's money.",
+      mine: "Household finance management — one wallet for the two of us.",
+      mineLabel: 'In my day',
+    ),
   ),
   Product(
     name: 'HoopSync',

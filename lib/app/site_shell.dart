@@ -141,6 +141,7 @@ class _SiteShellState extends State<SiteShell> {
             ),
             SLRule(color: line, maxWidth: widget.maxWidth),
             ...widget.children,
+            _LinerNotes(maxWidth: widget.maxWidth),
             Container(
               color: bodyGround,
               width: double.infinity,
@@ -293,6 +294,93 @@ class _NodeLink extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// The problem a product answers and the founder's line about it, set as
+/// liner notes above the footer on every product page. Skipped on back-office
+/// desks, the FamFi console and legal pages — they are not the product's pitch.
+class _LinerNotes extends StatelessWidget {
+  final double maxWidth;
+  const _LinerNotes({required this.maxWidth});
+
+  @override
+  Widget build(BuildContext context) {
+    final route = ModalRoute.of(context)?.settings.name;
+    final product = productForPath(route);
+    final story = product?.story;
+    if (story == null ||
+        route == null ||
+        route.endsWith('/desk') ||
+        route.endsWith('/personal') ||
+        route.endsWith('/privacy') ||
+        route.endsWith('/terms')) {
+      return const SizedBox.shrink();
+    }
+    final line = lineInk(product!.accent ?? SLColors.accent);
+    return SLPage(
+      maxWidth: maxWidth,
+      padding: const EdgeInsets.fromLTRB(24, 72, 24, 8),
+      child: LayoutBuilder(
+        builder: (context, cons) {
+          final wide = cons.maxWidth >= 760;
+          Widget block(String label, Widget body, int i) => FadeSlideIn(
+            index: i,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    PulseDot(color: line, size: 6),
+                    const SizedBox(width: 10),
+                    Text(label.toUpperCase(), style: SLType.eyebrow(line)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                body,
+              ],
+            ),
+          );
+          final problem = block(
+            'The problem',
+            Text(story.problem, style: SLType.body(wide ? 20 : 18)),
+            0,
+          );
+          final mine = block(
+            story.mineLabel,
+            Text(
+              story.mine,
+              style: SLType.display(wide ? 40 : 32).copyWith(height: 1.05),
+            ),
+            1,
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Divider(color: SLColors.hairline, height: 1),
+              const SizedBox(height: 40),
+              Text('LINER NOTES', style: SLType.label(SLColors.inkMuted)),
+              const SizedBox(height: 28),
+              if (wide)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 4, child: problem),
+                    const SizedBox(width: 64),
+                    Expanded(flex: 6, child: mine),
+                  ],
+                )
+              else ...[
+                problem,
+                const SizedBox(height: 36),
+                mine,
+              ],
+              const SizedBox(height: 56),
+            ],
+          );
+        },
+      ),
     );
   }
 }
