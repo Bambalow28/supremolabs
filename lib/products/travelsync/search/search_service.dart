@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show Color;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../app/backends.dart';
 import 'search_models.dart';
 
 /// Read-only ports of travelsync_website's `TripService.searchPlaceNames`
@@ -11,7 +12,7 @@ class TravelSyncSearchService {
   TravelSyncSearchService._();
   static final instance = TravelSyncSearchService._();
 
-  final _client = Supabase.instance.client;
+  SupabaseClient get _client => Supabase.instance.client;
 
   static const _avatarPalette = [
     Color(0xFF4B76FA),
@@ -25,6 +26,7 @@ class TravelSyncSearchService {
   Future<List<PlaceResult>> searchPlaces(String query) async {
     final q = query.trim();
     if (q.isEmpty) return [];
+    await backendsReady;
 
     final response = await _client
         .from('travel_cards')
@@ -55,6 +57,7 @@ class TravelSyncSearchService {
   Future<List<TripOwner>> searchProfiles(String query) async {
     final q = query.trim();
     if (q.isEmpty) return [];
+    await backendsReady;
     try {
       final rows = await _client
           .from('profiles')

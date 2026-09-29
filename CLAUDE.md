@@ -15,7 +15,12 @@ add one only once this ships to prod like the other four.
 
 Firebase Hosting, project ID `supremolabs` (console:
 https://console.firebase.google.com/project/supremolabs/overview). Deploy:
-`flutter build web --release && firebase deploy --only hosting --project supremolabs`.
+`firebase deploy --only hosting --project supremolabs` (its predeploy builds
+with `--no-tree-shake-icons` and runs `tool/stamp_build.sh`, which stamps the
+build and mirrors `assets/` under `/b/<stamp>/` so Cloudflare's 4h cache can't
+serve a stale icon font or `main.dart.js`; put `flutter` on PATH first).
+Firebase and Supabase start in the background (`lib/app/backends.dart`); pages
+that need one are wrapped in `BackendGate`.
 SPA rewrite (`**` → `/index.html`) is in `firebase.json`. Per-product routing:
 each product (`/travelsync`, `/wealthsync`, etc.) is its own dedicated page
 within this app, styled to match that product's own site/branding (e.g.

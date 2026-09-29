@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../about/about_page.dart';
+import 'backends.dart';
 import '../data/products.dart';
 import '../home/home_page.dart';
 import '../products/diamo/diamo_page.dart';
@@ -36,7 +37,7 @@ final pages = <String, WidgetBuilder>{
   '/plansync/itinerary': (_) => const PlanSyncPage(initialSection: 'itinerary'),
   '/plansync/places': (_) => const PlanSyncPage(initialSection: 'places'),
   // Private back office — deliberately not linked from any public page.
-  '/plansync/desk': (_) => const PlanSyncDeskPage(),
+  '/plansync/desk': (_) => const BackendGate(child: PlanSyncDeskPage()),
   '/notesync': (_) => NoteSyncPage(),
   '/notesync/folders': (_) => NoteSyncPage(initialSection: 'folders'),
   '/notesync/device': (_) => NoteSyncPage(initialSection: 'device'),
@@ -48,7 +49,7 @@ final pages = <String, WidgetBuilder>{
   '/workit/privacy': (_) => const WorkItPrivacyPage(),
   '/workit/terms': (_) => const WorkItTermsPage(),
   // Private back office — deliberately not linked from any public page.
-  '/workit/desk': (_) => const WorkItDeskPage(),
+  '/workit/desk': (_) => const BackendGate(child: WorkItDeskPage()),
   '/diamo': (_) => DiaMoPage(),
   '/diamo/diary': (_) => DiaMoPage(initialSection: 'diary'),
   '/diamo/discover': (_) => DiaMoPage(initialSection: 'discover'),
@@ -56,11 +57,11 @@ final pages = <String, WidgetBuilder>{
   '/stanverse/community': (_) => StanversePage(initialSection: 'community'),
   '/stanverse/marketplace': (_) => StanversePage(initialSection: 'marketplace'),
   // Private back office — deliberately not linked from any public page.
-  '/stanverse/desk': (_) => const StanverseDeskPage(),
+  '/stanverse/desk': (_) => const BackendGate(child: StanverseDeskPage()),
   '/famfi': (_) => const FamFiPage(),
   // The desktop console — every control the phone app has. Linked from
   // /famfi's nav and hero.
-  '/famfi/personal': (_) => const FamFiConsolePage(),
+  '/famfi/personal': (_) => const BackendGate(child: FamFiConsolePage()),
 };
 
 /// Root navigator key, so a route not in [pages] can redirect to home
