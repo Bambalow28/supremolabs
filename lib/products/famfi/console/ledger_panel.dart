@@ -9,8 +9,7 @@ import 'package:juwa_wealth/widgets.dart';
 import '../ff_theme.dart';
 import 'csv_download.dart';
 import 'csv_export.dart';
-import 'drawer.dart'
-    show DPickerButton, categoryLabel, openTransactionDetail, pickFrom;
+import 'drawer.dart' show categoryLabel, openTransactionDetail;
 
 class LedgerPanel extends StatefulWidget {
   final JuwaStore store;
@@ -33,25 +32,10 @@ class LedgerPanel extends StatefulWidget {
 class _LedgerPanelState extends State<LedgerPanel> {
   _Filters _filters = const _Filters();
 
-  final _entryName = TextEditingController();
-  final _entryAmount = TextEditingController();
-  String? _entryAccountId;
-  String? _entryCategoryId;
-  late Owner _entryBy = widget.store.me;
-  DateTime _entryDate = DateTime.now();
-  bool _entryNegative = true;
-
   static const _months = [
     'January', 'February', 'March', 'April', 'May', 'June', //
     'July', 'August', 'September', 'October', 'November', 'December',
   ];
-
-  @override
-  void dispose() {
-    _entryName.dispose();
-    _entryAmount.dispose();
-    super.dispose();
-  }
 
   Future<void> _openFilters() async {
     final next = await showDialog<_Filters>(
@@ -76,34 +60,9 @@ class _LedgerPanelState extends State<LedgerPanel> {
     ),
   );
 
-  void _addEntry() {
-    final amt = AmountField.parse(_entryAmount.text);
-    if (amt == null || amt == 0 || _entryAccountId == null) return;
-    widget.store.addTransaction(
-      Transaction(
-        id: widget.store.newId(),
-        accountId: _entryAccountId!,
-        amount: _entryNegative ? -amt.abs() : amt.abs(),
-        date: _entryDate,
-        name: _entryName.text.trim().isEmpty
-            ? (_entryNegative ? 'Spent' : 'Received')
-            : _entryName.text.trim(),
-        categoryId: _entryCategoryId,
-        by: _entryBy,
-      ),
-    );
-    _entryName.clear();
-    _entryAmount.clear();
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    // Re-default if the remembered account was deleted since.
-    if (!widget.store.accounts.any((a) => a.id == _entryAccountId)) {
-      _entryAccountId = widget.store.accounts.firstOrNull?.id;
-    }
 
     final f = _filters;
     final searching = widget.searchQuery.isNotEmpty;
@@ -167,14 +126,10 @@ class _LedgerPanelState extends State<LedgerPanel> {
                   ),
                 ),
               ),
-              OutlinedButton.icon(
+              _ToolButton(
+                icon: Icons.file_download_outlined,
+                label: 'Export',
                 onPressed: _openExport,
-                icon: const Icon(Icons.file_download_outlined, size: 18),
-                label: const Text('Export'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: c.ink,
-                  side: BorderSide(color: c.rule),
-                ),
               ),
               const SizedBox(width: 8),
               Badge(
@@ -182,14 +137,10 @@ class _LedgerPanelState extends State<LedgerPanel> {
                 label: Text('${f.count}'),
                 backgroundColor: c.ink,
                 textColor: c.bg,
-                child: OutlinedButton.icon(
+                child: _ToolButton(
+                  icon: Icons.tune_rounded,
+                  label: 'Filters',
                   onPressed: _openFilters,
-                  icon: const Icon(Icons.tune_rounded, size: 18),
-                  label: const Text('Filters'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: c.ink,
-                    side: BorderSide(color: c.rule),
-                  ),
                 ),
               ),
             ],
@@ -230,31 +181,6 @@ class _LedgerPanelState extends State<LedgerPanel> {
             ],
           ),
           const SizedBox(height: 16),
-          // The card owns the fill, border and radius; the row inside stays
-          // transparent so it can't square off the rounded corners.
-          Container(
-            decoration: BoxDecoration(
-              color: c.bg,
-              border: Border.all(color: c.rule),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: _EntryRow(
-              store: widget.store,
-              name: _entryName,
-              amount: _entryAmount,
-              accountId: _entryAccountId,
-              onAccountChanged: (v) => setState(() => _entryAccountId = v),
-              categoryId: _entryCategoryId,
-              onCategoryChanged: (v) => setState(() => _entryCategoryId = v),
-              by: _entryBy,
-              onByChanged: (v) => setState(() => _entryBy = v),
-              date: _entryDate,
-              onDateChanged: (v) => setState(() => _entryDate = v),
-              negative: _entryNegative,
-              onSignChanged: (v) => setState(() => _entryNegative = v),
-              onSubmit: _addEntry,
-            ),
-          ),
           const SizedBox(height: 14),
           if (filtered.isEmpty)
             Container(
@@ -853,195 +779,40 @@ class _TxRow extends StatelessWidget {
   }
 }
 
-class _EntryRow extends StatelessWidget {
-  final JuwaStore store;
-  final TextEditingController name;
-  final TextEditingController amount;
-  final String? accountId;
-  final ValueChanged<String> onAccountChanged;
-  final String? categoryId;
-  final ValueChanged<String?> onCategoryChanged;
-  final Owner by;
-  final ValueChanged<Owner> onByChanged;
-  final DateTime date;
-  final ValueChanged<DateTime> onDateChanged;
-  final bool negative;
-  final ValueChanged<bool> onSignChanged;
-  final VoidCallback onSubmit;
-
-  const _EntryRow({
-    required this.store,
-    required this.name,
-    required this.amount,
-    required this.accountId,
-    required this.onAccountChanged,
-    required this.categoryId,
-    required this.onCategoryChanged,
-    required this.by,
-    required this.onByChanged,
-    required this.date,
-    required this.onDateChanged,
-    required this.negative,
-    required this.onSignChanged,
-    required this.onSubmit,
+/// Export / Filters: one fixed height, icon and label centred in it.
+class _ToolButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  const _ToolButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final account = store.accounts.where((a) => a.id == accountId).firstOrNull;
-
-    final dateField = SizedBox(
-      width: 96,
-      child: GestureDetector(
-        onTap: () async {
-          final d = await showDatePicker(
-            context: context,
-            initialDate: date,
-            firstDate: DateTime(2000),
-            lastDate: DateTime(2100),
-            builder: (_, child) => FFPopIn(child: child!),
-          );
-          if (d != null) onDateChanged(DateTime(d.year, d.month, d.day));
-        },
-        child: Text(
-          ffDate(date),
-          style: ff(13, weight: FontWeight.w700, color: c.ink),
+    return SizedBox(
+      height: 40,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: c.ink,
+          side: BorderSide(color: c.rule),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          alignment: Alignment.center,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18),
+            const SizedBox(width: 8),
+            Text(label),
+          ],
         ),
       ),
-    );
-    final nameField = TextField(
-      controller: name,
-      style: ff(14, color: c.ink),
-      decoration: InputDecoration(
-        isDense: true,
-        hintText: 'Name — e.g. Loblaws',
-        hintStyle: ff(14, color: c.faint),
-      ),
-    );
-    final accountField = DPickerButton(
-      onTap: () async {
-        final id = await pickFrom<String>(
-          context,
-          title: 'Account',
-          items: [for (final a in store.accounts) (a.name, a.id)],
-        );
-        if (id != null) onAccountChanged(id);
-      },
-      child: Text(
-        account?.name ?? 'Account',
-        style: ff(13, color: c.ink),
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-    final categoryField = DPickerButton(
-      onTap: () async {
-        final items = <(String, String?)>[
-          ('None', null),
-          for (final b in store.budgets) ('${b.name} (Budget)', b.id),
-          for (final cat in store.categories) (cat.name, cat.id),
-        ];
-        final id = await pickFrom<String?>(
-          context,
-          title: 'Category',
-          items: items,
-        );
-        onCategoryChanged(id);
-      },
-      child: Text(
-        categoryLabel(store, categoryId),
-        style: ff(13, color: c.ink),
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-    final ownerField = SizedBox(
-      width: 128,
-      child: SegmentedTabs(
-        labels: [for (final o in Owner.people) o.title],
-        selected: Owner.people.indexOf(by).clamp(0, Owner.people.length - 1),
-        onChanged: (i) => onByChanged(Owner.people[i]),
-      ),
-    );
-    final signField = SizedBox(
-      width: 160,
-      child: SegmentedTabs(
-        labels: const ['Spent', 'Received'],
-        selected: negative ? 0 : 1,
-        onChanged: (i) => onSignChanged(i == 0),
-      ),
-    );
-    final amountField = SizedBox(
-      width: 110,
-      child: TextField(
-        controller: amount,
-        textAlign: TextAlign.right,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: const [MoneyTextFormatter()],
-        style: ff(14, weight: FontWeight.w700, color: c.ink),
-        decoration: InputDecoration(
-          isDense: true,
-          prefixText: r'$',
-          hintText: '0.00',
-          hintStyle: ff(14, color: c.faint),
-        ),
-        onSubmitted: (_) => onSubmit(),
-      ),
-    );
-
-    return LayoutBuilder(
-      builder: (context, cons) {
-        // Seven fields in one Row crush the account/category pickers to
-        // nothing once the fixed-width fields (date/owner/sign/amount, ~460px)
-        // eat most of a tablet-width panel — two rows instead, same fields.
-        final stacked = cons.maxWidth < 720;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: stacked
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        dateField,
-                        const SizedBox(width: 10),
-                        Expanded(child: nameField),
-                        const SizedBox(width: 10),
-                        amountField,
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(child: accountField),
-                        const SizedBox(width: 10),
-                        Expanded(child: categoryField),
-                        const SizedBox(width: 10),
-                        ownerField,
-                        const SizedBox(width: 10),
-                        signField,
-                      ],
-                    ),
-                  ],
-                )
-              : Row(
-                  children: [
-                    dateField,
-                    const SizedBox(width: 10),
-                    Expanded(flex: 3, child: nameField),
-                    const SizedBox(width: 10),
-                    Expanded(flex: 2, child: accountField),
-                    const SizedBox(width: 10),
-                    Expanded(flex: 2, child: categoryField),
-                    const SizedBox(width: 10),
-                    ownerField,
-                    const SizedBox(width: 10),
-                    signField,
-                    const SizedBox(width: 10),
-                    amountField,
-                  ],
-                ),
-        );
-      },
     );
   }
 }

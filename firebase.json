@@ -3,7 +3,7 @@
     "public": "build/web",
     "predeploy": [
       "flutter build web --release --no-tree-shake-icons",
-      "perl -pi -e \"s/__BUILD__/time/e\" build/web/index.html"
+      "T=$(date +%s) && perl -pi -e \"s/__BUILD__/$T/g\" build/web/index.html && mkdir -p build/web/b/$T && cp -R build/web/assets build/web/b/$T/assets"
     ],
     "ignore": [
       "firebase.json",
