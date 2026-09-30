@@ -939,6 +939,15 @@ class _BillDrawerState extends State<BillDrawer> {
         ),
       ),
       children: [
+        if (_editing)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Text(
+              'Changes apply to every due date from now on. Payments already '
+              'logged keep their amounts.',
+              style: ff(12.5, color: c.muted),
+            ),
+          ),
         DField(
           label: 'Amount',
           child: AmountField(
@@ -1003,7 +1012,9 @@ class _BillDrawerState extends State<BillDrawer> {
             onPressed: () => _confirm(
               context,
               title: 'Delete bill?',
-              body: 'Removes ${widget.bill!.name} and every occurrence.',
+              body:
+                  'Stops ${widget.bill!.name} and removes every upcoming due '
+                  'date. Payments already logged stay in Transactions.',
               onConfirm: () async {
                 await widget.store.deleteBill(widget.bill!.id);
                 widget.onClose();

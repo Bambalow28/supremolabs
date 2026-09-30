@@ -3,10 +3,10 @@
 // live with the household's Firestore data via HouseholdSync — the same sync
 // the phone app runs (see juwa_wealth/docs/firebase-plan.md).
 //
-// No Apple sign-in on the web: this browser signs in anonymously and joins
-// the household with the same invite code a phone would use for a second
-// phone (Household.join). Firebase Auth persists that anonymous uid across
-// visits, so the join screen only shows up once per browser.
+// Signs in with Apple (popup) as the person themselves — the same Apple ID as
+// on the phone gives the same Firebase uid, so users/{uid} already says which
+// household and which owner (Josh or Judy) this browser acts as. The console
+// is never a household member of its own.
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -50,6 +50,7 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
   HouseholdSync? _sync;
   User? _user;
   String? _hid;
+  bool _notMember = false;
   Object? _error;
 
   @override
@@ -74,20 +75,21 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
 
   Future<void> _onUser(User? user) async {
     setState(() => _user = user);
-    if (user == null) {
-      // No anonymous session yet (fresh browser) — start one; this handler
-      // runs again once it lands.
-      try {
-        await _auth!.signInAnonymously();
-      } catch (e) {
-        if (mounted) setState(() => _error = e);
-      }
+    // A leftover anonymous session (from the old join-code flow) isn't a
+    // person; drop it so the sign-in card shows.
+    if (user == null) return;
+    if (user.isAnonymous) {
+      await _auth!.signOut();
       return;
     }
     try {
       final store = await _future;
       final h = await Household.of(user.uid);
-      if (h != null) await _connect(store, h.hid, h.owner);
+      if (h == null) {
+        if (mounted) setState(() => _notMember = true);
+      } else {
+        await _connect(store, h.hid, h.owner);
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e);
     }
@@ -134,7 +136,7 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
         Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: _consoleWidth),
-            // Every state below (message, join card) reads context.c, not
+            // Every state below (message, sign-in card) reads context.c, not
             // just the console body — so the theme wraps them all.
             child: Theme(
               data: famFiTheme(MediaQuery.platformBrightnessOf(context)),
@@ -155,7 +157,7 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
   }
 
   /// One keyed widget per console state, so the switcher above crossfades
-  /// skeleton → join card → console instead of cutting between them.
+  /// skeleton → sign-in card → console instead of cutting between them.
   Widget _state(JuwaStore? store) {
     if (store == null) return const _ConsoleSkeleton(key: ValueKey('skel'));
     return KeyedSubtree(
@@ -163,9 +165,9 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
         _noBackend || _error != null
             ? 'msg'
             : _user == null
-            ? 'skel'
+            ? 'signin'
             : _hid == null
-            ? 'join'
+            ? (_notMember ? 'nomember' : 'skel')
             : 'console',
       ),
       child: Builder(
@@ -184,13 +186,19 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
                   'Check your connection and reload.',
             );
           }
-          if (_user == null || _hid == null) {
-            return _user == null
-                ? const _ConsoleSkeleton()
-                : _JoinCard(
-                    uid: _user!.uid,
-                    onJoined: (hid, owner) => _connect(store, hid, owner),
-                  );
+          if (_user == null) return _SignInCard(auth: _auth!);
+          if (_hid == null) {
+            return _notMember
+                ? _ConsoleMessage(
+                    text:
+                        "This Apple ID isn't in a household. Sign in with "
+                        'the one you use on your phone.',
+                    action: ('Sign out', () {
+                      setState(() => _notMember = false);
+                      _auth!.signOut();
+                    }),
+                  )
+                : const _ConsoleSkeleton();
           }
           // The body rebuilds on the store, so it flips from its
           // own skeleton to the real console when the snapshot lands.
@@ -295,71 +303,60 @@ class _ConsoleSkeleton extends StatelessWidget {
 
 class _ConsoleMessage extends StatelessWidget {
   final String text;
-  const _ConsoleMessage({required this.text});
+  final (String, VoidCallback)? action;
+  const _ConsoleMessage({required this.text, this.action});
 
   @override
   Widget build(BuildContext context) => SizedBox(
     height: 720,
     child: Center(
-      child: Text(
-        text,
-        style: ff(15, color: context.c.muted),
-        textAlign: TextAlign.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            text,
+            style: ff(15, color: context.c.muted),
+            textAlign: TextAlign.center,
+          ),
+          if (action != null) ...[
+            const SizedBox(height: 16),
+            TextButton(onPressed: action!.$2, child: Text(action!.$1)),
+          ],
+        ],
       ),
     ),
   );
 }
 
-/// Shown once per browser: joins the household with the same invite code a
-/// phone uses to add a second phone (Household.invite/join in sync.dart).
-class _JoinCard extends StatefulWidget {
-  final String uid;
-  final void Function(String hid, Owner owner) onJoined;
-  const _JoinCard({required this.uid, required this.onJoined});
+/// Signed out: Sign in with Apple. Needs the Apple provider enabled on the
+/// juwa-wealth-app Firebase project with a Services ID, and supremolabs.com in
+/// Authorized domains.
+class _SignInCard extends StatefulWidget {
+  final FirebaseAuth auth;
+  const _SignInCard({required this.auth});
 
   @override
-  State<_JoinCard> createState() => _JoinCardState();
+  State<_SignInCard> createState() => _SignInCardState();
 }
 
-class _JoinCardState extends State<_JoinCard> {
-  final _name = TextEditingController();
-  final _code = TextEditingController();
+class _SignInCardState extends State<_SignInCard> {
   bool _busy = false;
   String? _error;
 
-  @override
-  void dispose() {
-    _name.dispose();
-    _code.dispose();
-    super.dispose();
-  }
-
-  Future<void> _join() async {
-    if (_name.text.trim().isEmpty) {
-      setState(() => _error = 'Enter your name first.');
-      return;
-    }
+  Future<void> _signIn() async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final joined = await Household.join(
-        widget.uid,
-        _name.text.trim(),
-        _code.text,
+      await widget.auth.signInWithPopup(
+        OAuthProvider('apple.com')..addScope('name'),
       );
-      if (joined == null) {
-        setState(
-          () => _error = 'That code is wrong or expired. Ask for a new one.',
-        );
-      } else {
-        widget.onJoined(joined.hid, joined.owner);
+    } on FirebaseAuthException catch (e) {
+      if (e.code != 'popup-closed-by-user' &&
+          e.code != 'cancelled-popup-request') {
+        _error = "Couldn't sign in (${e.code}).";
       }
-    } catch (_) {
-      setState(
-        () => _error = "Couldn't reach the server. Check your connection.",
-      );
     }
     if (mounted) setState(() => _busy = false);
   }
@@ -377,55 +374,18 @@ class _JoinCardState extends State<_JoinCard> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Join your household',
+                'Sign in',
                 style: ff(20, weight: FontWeight.w800, color: c.ink),
               ),
               const SizedBox(height: 8),
               Text(
-                'Open the household sheet on either phone and invite this '
-                'browser — the code works for 10 minutes.',
+                'Use the Apple ID you use on your phone. The console opens '
+                "as you — your household, your side of it.",
                 style: ff(13.5, color: c.muted),
               ),
               const SizedBox(height: 20),
-              TextField(
-                controller: _name,
-                textCapitalization: TextCapitalization.words,
-                style: ff(16, color: c.ink),
-                decoration: InputDecoration(
-                  hintText: 'Your name',
-                  filled: true,
-                  fillColor: c.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(11),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _code,
-                textCapitalization: TextCapitalization.characters,
-                autocorrect: false,
-                maxLength: 6,
-                style: ff(
-                  18,
-                  weight: FontWeight.w700,
-                  color: c.ink,
-                ).copyWith(letterSpacing: 4),
-                decoration: InputDecoration(
-                  hintText: 'Join code',
-                  counterText: '',
-                  filled: true,
-                  fillColor: c.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(11),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
               FilledButton(
-                onPressed: _busy ? null : _join,
+                onPressed: _busy ? null : _signIn,
                 style: FilledButton.styleFrom(
                   backgroundColor: c.ink,
                   foregroundColor: c.bg,
@@ -440,7 +400,7 @@ class _JoinCardState extends State<_JoinCard> {
                           color: c.bg,
                         ),
                       )
-                    : const Text('Join household'),
+                    : const Text('Sign in with Apple'),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
@@ -475,7 +435,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
 
   // The tab rides in the URL (?tab=), so a reload lands back where you were.
   FFTab _tab =
-      FFTab.values.asNameMap()[Uri.base.queryParameters['tab']] ?? FFTab.payday;
+      FFTab.values.asNameMap()[Uri.base.queryParameters['tab']] ?? FFTab.ledger;
   bool _railCollapsed = false;
   // A reload is in flight: rail and panel show skeletons, then slide in.
   bool _refreshing = false;
@@ -488,7 +448,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
   bool _drawerOpen = false;
   // Last tab drawn and which way the strip moved to leave it, so the next
   // panel slides in from the side its tab sits on.
-  FFTab _shownTab = FFTab.payday;
+  FFTab _shownTab = FFTab.ledger;
   int _tabDir = 1;
 
   final _search = TextEditingController();

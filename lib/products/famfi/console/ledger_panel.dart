@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
+import 'package:juwa_wealth/ui/transactions/transactions_screen.dart'
+    show dayLabel, newestFirst;
 import 'package:juwa_wealth/widgets.dart';
 
 import '../ff_theme.dart';
@@ -60,6 +62,61 @@ class _LedgerPanelState extends State<LedgerPanel> {
     ),
   );
 
+  List<Widget> _byDay(BuildContext context, List<Transaction> shown) {
+    final c = context.c;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final out = <Widget>[];
+    var i = 0;
+    DateTime? day;
+    for (final (index, t) in shown.indexed) {
+      final d = DateTime(t.date.year, t.date.month, t.date.day);
+      if (d != day) {
+        day = d;
+        final net = shown
+            .skip(index)
+            .takeWhile(
+              (x) => DateTime(x.date.year, x.date.month, x.date.day) == d,
+            )
+            .fold(0.0, (s, x) => s + x.amount);
+        out.add(
+          Padding(
+            padding: EdgeInsets.only(top: index == 0 ? 0 : 16, bottom: 8),
+            child: Row(
+              children: [
+                Text(
+                  dayLabel(d, today),
+                  style: ff(13, weight: FontWeight.w700, color: c.muted),
+                ),
+                const Spacer(),
+                Text(
+                  ffAmount(net),
+                  style: ff(13, weight: FontWeight.w600, color: c.faint),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      out.add(
+        Reveal(
+          index: i++,
+          child: _TxRow(
+            store: widget.store,
+            tx: t,
+            onTap: () => openTransactionDetail(
+              widget.store,
+              t,
+              openDrawer: widget.openDrawer,
+              closeDrawer: widget.closeDrawer,
+            ),
+          ),
+        ),
+      );
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -85,7 +142,7 @@ class _LedgerPanelState extends State<LedgerPanel> {
         if (!t.name.toLowerCase().contains(q) && !cat.contains(q)) return false;
       }
       return true;
-    }).toList()..sort((a, b) => b.date.compareTo(a.date));
+    }).toList()..sort(newestFirst);
 
     final totalIn = filtered
         .where((t) => t.amount > 0)
@@ -197,22 +254,8 @@ class _LedgerPanelState extends State<LedgerPanel> {
               ),
             )
           else
-            // One card per transaction, newest first, each sliding in on
-            // its own beat.
-            for (final (i, t) in shown.indexed)
-              Reveal(
-                index: i,
-                child: _TxRow(
-                  store: widget.store,
-                  tx: t,
-                  onTap: () => openTransactionDetail(
-                    widget.store,
-                    t,
-                    openDrawer: widget.openDrawer,
-                    closeDrawer: widget.closeDrawer,
-                  ),
-                ),
-              ),
+            // Grouped by day, newest first; each row slides in on its own beat.
+            ..._byDay(context, shown),
           if (filtered.length > cap)
             Padding(
               padding: const EdgeInsets.only(top: 6),
@@ -692,10 +735,6 @@ class _TxRow extends StatelessWidget {
                   child: Icon(icon, size: 22, color: onSwatchIcon),
                 ),
                 const SizedBox(width: 14),
-                SizedBox(
-                  width: 96,
-                  child: Text(ffDate(tx.date), style: ff(13, color: c.muted)),
-                ),
                 Expanded(
                   flex: 3,
                   child: Row(

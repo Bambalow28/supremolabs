@@ -46,6 +46,21 @@ class _BillsPanelState extends State<BillsPanel> {
     await widget.store.markBillPaid(bill, date, accountId);
   }
 
+  Future<void> _openAll() async {
+    final edit = await showDialog<Bill>(
+      context: context,
+      builder: (_) => FFPopIn(child: _AllBillsDialog(store: widget.store)),
+    );
+    if (edit == null || !mounted) return;
+    widget.openDrawer(
+      BillDrawer(
+        store: widget.store,
+        bill: edit,
+        onClose: widget.closeDrawer,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -125,6 +140,16 @@ class _BillsPanelState extends State<BillsPanel> {
                     ],
                   ),
                   overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: _openAll,
+                icon: const Icon(Icons.list_alt_rounded, size: 18),
+                label: const Text('All bills'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: c.ink,
+                  side: BorderSide(color: c.rule),
                 ),
               ),
             ],
@@ -621,6 +646,200 @@ class _RowState extends State<_Row> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Every bill in one list. Edit hands the bill back to the panel (which opens
+/// the drawer); delete is confirmed here.
+///
+/// Bills are recurring series, not single dues, so both actions act on the
+/// whole series: edits and deletes change what is *scheduled* from now on,
+/// while payments already logged live in Transactions and are never touched.
+class _AllBillsDialog extends StatelessWidget {
+  final JuwaStore store;
+  const _AllBillsDialog({required this.store});
+
+  Future<void> _delete(BuildContext context, Bill bill) async {
+    final paid = store.transactions.where((t) => t.billId == bill.id).length;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => FFPopIn(
+        child: AlertDialog(
+          title: Text('Delete ${bill.name}?'),
+          content: Text(
+            'Stops this ${freqLabel(bill).split(' · ').first.toLowerCase()} '
+            'bill and removes every upcoming due date. '
+            '${paid == 0 ? 'No payments are logged for it.' : '$paid logged '
+                  '${paid == 1 ? 'payment stays' : 'payments stay'} in '
+                  'Transactions.'}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) await store.deleteBill(bill.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    // Rebuilds as bills change, so a delete drops its row in place.
+    return ListenableBuilder(
+      listenable: store,
+      builder: (context, _) {
+        final day = DateTime.now();
+        final today = DateTime(day.year, day.month, day.day);
+        final rows =
+            [
+              for (final b in store.bills)
+                (b, JuwaStore.nextDue(b, today)),
+            ]..sort((a, b) {
+              if (a.$2 == null) return b.$2 == null ? 0 : 1;
+              if (b.$2 == null) return -1;
+              return a.$2!.compareTo(b.$2!);
+            });
+        return Dialog(
+          backgroundColor: c.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 680),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 22, 12, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'All bills',
+                          style: ff(18, weight: FontWeight.w800, color: c.ink),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close_rounded, color: c.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                  child: Text(
+                    'Edit or delete changes the whole recurring bill from '
+                    'now on. Payments already logged stay as they are.',
+                    style: ff(13, color: c.muted),
+                  ),
+                ),
+                if (rows.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+                    child: Text('No bills yet.', style: ff(14, color: c.muted)),
+                  )
+                else
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.only(bottom: 12),
+                      children: [
+                        for (final (bill, due) in rows)
+                          _BillLine(
+                            bill: bill,
+                            due: due,
+                            onEdit: () => Navigator.pop(context, bill),
+                            onDelete: () => _delete(context, bill),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _BillLine extends StatelessWidget {
+  final Bill bill;
+  final DateTime? due;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  const _BillLine({
+    required this.bill,
+    required this.due,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final swatch = swatchFor(bill.color);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 10, 12, 10),
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: c.rule))),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: swatch.color,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(iconFor(bill.icon), size: 16, color: swatch.on),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  bill.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: ff(14.5, weight: FontWeight.w600, color: c.ink),
+                ),
+                Text(
+                  '${freqLabel(bill)} · ${due == null ? 'no upcoming date' : 'next ${ffDate(due!)}'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: ff(12.5, color: c.muted),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            ffMoney(bill.amount),
+            style: ff(15, weight: FontWeight.w700, color: c.ink),
+          ),
+          IconButton(
+            tooltip: 'Edit',
+            onPressed: onEdit,
+            icon: Icon(Icons.edit_outlined, size: 19, color: c.muted),
+          ),
+          IconButton(
+            tooltip: 'Delete',
+            onPressed: onDelete,
+            icon: Icon(Icons.delete_outline_rounded, size: 19, color: c.bad),
+          ),
+        ],
       ),
     );
   }

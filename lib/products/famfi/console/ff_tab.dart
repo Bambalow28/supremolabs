@@ -1,2 +1,2 @@
-/// The console's four tabs — Payday is the default per the mockup.
+/// The console's four tabs — Transactions is the default.
 enum FFTab { ledger, bills, payday, budget }

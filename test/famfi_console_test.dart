@@ -130,20 +130,20 @@ void main() {
     await tester.pumpWidget(await _console());
     await tester.pumpAndSettle();
 
-    // No accounts yet: the rail's empty state and the Payday tab's own
-    // empty state (Payday is the default tab) should both show.
+    // No accounts yet: the rail's empty state and the Transactions tab's own
+    // empty state (Transactions is the default tab) should both show.
     expect(find.textContaining('No accounts yet'), findsWidgets);
-    expect(find.text('Payday'), findsWidgets);
+    expect(find.textContaining('before logging a transaction'), findsOneWidget);
 
     // Digits typed into a field are text, not the 1–4 tab shortcuts.
     await tester.tap(find.byType(TextField).first);
     await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
     await tester.pumpAndSettle();
-    expect(find.textContaining('run payday'), findsOneWidget);
+    expect(find.textContaining('before logging a transaction'), findsOneWidget);
 
-    await tester.tap(find.text('Transactions'));
+    await tester.tap(find.text('Payday'));
     await tester.pumpAndSettle();
-    expect(find.text('Transactions'), findsWidgets);
+    expect(find.textContaining('run payday'), findsOneWidget);
 
     await tester.tap(find.text('Bills'));
     await tester.pumpAndSettle();
@@ -229,7 +229,9 @@ void main() {
     await tester.pumpWidget(await _console());
     await tester.pumpAndSettle();
 
-    // Payday is the default tab: two cheque cards, one per owner.
+    await tester.tap(find.text('Payday').first);
+    await tester.pumpAndSettle();
+    // Two cheque cards, one per owner.
     expect(find.text("Josh's cheque"), findsOneWidget);
     expect(find.text("Judy's cheque"), findsOneWidget);
 
@@ -256,7 +258,7 @@ void main() {
     });
     await tester.pumpWidget(await _console());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Transactions'));
+    await tester.tap(find.text('Transactions').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Loblaws'));
     await tester.pumpAndSettle();
@@ -298,7 +300,7 @@ void main() {
     });
     await tester.pumpWidget(await _console());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Transactions'));
+    await tester.tap(find.text('Transactions').first);
     await tester.pumpAndSettle();
     expect(find.text('Loblaws'), findsOneWidget);
     await tester.tap(find.text('Filters'));
