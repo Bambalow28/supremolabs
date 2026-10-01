@@ -86,7 +86,7 @@ class PaydayPanel extends StatelessWidget {
           split.unassigned.fold(0.0, (s2, o2) => s2 + o2.subtotal);
     });
 
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(40, 28, 40, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

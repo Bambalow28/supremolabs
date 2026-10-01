@@ -173,7 +173,7 @@ class _LedgerPanelState extends State<LedgerPanel> {
       );
     }
 
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(40, 28, 40, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

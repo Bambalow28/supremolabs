@@ -605,6 +605,16 @@ class _ConsoleState extends State<FamFiConsoleBody> {
     _drawerSwap = _drawerOpen;
     _drawerChild = KeyedSubtree(key: UniqueKey(), child: child);
     _drawerOpen = true;
+    // The page scrolls, and the drawer sits at the console's top edge.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && Scrollable.maybeOf(context) != null) {
+        Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    });
   });
 
   /// [owner]'s picked deposit account, or their own default if it was since
@@ -752,8 +762,10 @@ class _ConsoleState extends State<FamFiConsoleBody> {
             ? _deltasFor(into, splits)
             : const <String, double>{};
 
-        return SizedBox(
-          height: _consoleHeight(context),
+        // A floor, not a fixed height: the tabs grow with their content and
+        // the page scrolls, rather than each list scrolling inside itself.
+        return ConstrainedBox(
+          constraints: BoxConstraints(minHeight: _consoleHeight(context)),
           child: Theme(
             data: famFiTheme(MediaQuery.platformBrightnessOf(context)),
             child: Builder(
@@ -775,6 +787,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                           children: [
                             compact
                                 ? Column(
+                                    mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
                                     children: [
@@ -811,12 +824,12 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                               _railCollapsed = !_railCollapsed,
                                         ),
                                       ),
-                                      Expanded(child: panel),
+                                      panel,
                                     ],
                                   )
                                 : Row(
                                     crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       WalletRail(
                                         store: store,
@@ -842,6 +855,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                       ),
                                       Expanded(
                                         child: Column(
+                                          mainAxisSize: MainAxisSize.min,
                                           crossAxisAlignment:
                                               CrossAxisAlignment.stretch,
                                           children: [
@@ -857,7 +871,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                               onRefresh: _refreshAll,
                                               refreshing: _refreshing,
                                             ),
-                                            Expanded(child: panel),
+                                            panel,
                                           ],
                                         ),
                                       ),

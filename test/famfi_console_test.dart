@@ -21,10 +21,13 @@ Finder _inLedger(String text) =>
 // tests), same as juwa_wealth's own widget_test.dart tests Shell directly
 // rather than going through AuthGate.
 Future<Widget> _console() async => MaterialApp(
+  // The real page scrolls (SiteShell); the console itself no longer does.
   home: Scaffold(
-    body: FamFiConsoleBody(
-      store: await JuwaStore.load(),
-      onRefresh: () async {},
+    body: SingleChildScrollView(
+      child: FamFiConsoleBody(
+        store: await JuwaStore.load(),
+        onRefresh: () async {},
+      ),
     ),
   ),
 );

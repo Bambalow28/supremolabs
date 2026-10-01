@@ -124,6 +124,7 @@ class WalletRail extends StatelessWidget {
 
     final cards = loading
         ? ListView(
+            shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             scrollDirection: compact ? Axis.horizontal : Axis.vertical,
             padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
@@ -142,9 +143,11 @@ class WalletRail extends StatelessWidget {
             ],
           )
         : ReorderableListView.builder(
-            shrinkWrap: compact,
+            // Never scrolls itself: the rail grows with its cards and the
+            // page scrolls.
+            shrinkWrap: true,
             scrollDirection: compact ? Axis.horizontal : Axis.vertical,
-            physics: compact ? const NeverScrollableScrollPhysics() : null,
+            physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
             itemCount: store.accounts.length,
             buildDefaultDragHandles: false,
@@ -279,6 +282,14 @@ class WalletRail extends StatelessWidget {
       duration: _fold,
       curve: Curves.easeOutCubic,
       width: collapsed ? _slim : _wide,
+      // Same floor as the console, so the divider still runs the full height
+      // on a short page.
+      constraints: BoxConstraints(
+        minHeight: (MediaQuery.sizeOf(context).height - 100).clamp(
+          720.0,
+          double.infinity,
+        ),
+      ),
       decoration: BoxDecoration(
         color: c.bg,
         border: Border(right: BorderSide(color: c.rule)),
@@ -288,29 +299,30 @@ class WalletRail extends StatelessWidget {
           children: [
             // Laid out at full width even while it folds, so nothing reflows
             // mid-animation — it just fades and is clipped.
-            OverflowBox(
-              alignment: Alignment.topLeft,
-              minWidth: _wide,
-              maxWidth: _wide,
-              child: IgnorePointer(
-                ignoring: collapsed,
-                child: AnimatedOpacity(
-                  duration: _fold,
-                  opacity: collapsed ? 0 : 1,
-                  child: Column(
-                    children: [
-                      header,
-                      Expanded(
-                        child: store.accounts.isEmpty && !loading
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              child: SizedBox(
+                width: _wide,
+                child: IgnorePointer(
+                  ignoring: collapsed,
+                  child: AnimatedOpacity(
+                    duration: _fold,
+                    opacity: collapsed ? 0 : 1,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        header,
+                        store.accounts.isEmpty && !loading
                             ? Align(
                                 alignment: Alignment.centerLeft,
                                 child: emptyNote,
                               )
                             : cards,
-                      ),
-                      addButton,
-                      footer,
-                    ],
+                        addButton,
+                        footer,
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -318,6 +330,7 @@ class WalletRail extends StatelessWidget {
             if (collapsed)
               Positioned.fill(
                 child: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
                   child: Column(
                     children: [
                       const SizedBox(height: 12),

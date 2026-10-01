@@ -83,7 +83,7 @@ class _BillsPanelState extends State<BillsPanel> {
     final beforeTotal = before.fold(0.0, (s, e) => s + e.$1.amount);
 
     if (store.bills.isEmpty) {
-      return SingleChildScrollView(
+      return Padding(
         padding: const EdgeInsets.fromLTRB(40, 28, 40, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,7 +102,7 @@ class _BillsPanelState extends State<BillsPanel> {
       );
     }
 
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(40, 28, 40, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
