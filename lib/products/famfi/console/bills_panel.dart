@@ -53,11 +53,7 @@ class _BillsPanelState extends State<BillsPanel> {
     );
     if (edit == null || !mounted) return;
     widget.openDrawer(
-      BillDrawer(
-        store: widget.store,
-        bill: edit,
-        onClose: widget.closeDrawer,
-      ),
+      BillDrawer(store: widget.store, bill: edit, onClose: widget.closeDrawer),
     );
   }
 
@@ -88,7 +84,7 @@ class _BillsPanelState extends State<BillsPanel> {
 
     if (store.bills.isEmpty) {
       return SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(40, 4, 40, 40),
+        padding: const EdgeInsets.fromLTRB(40, 28, 40, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -107,7 +103,7 @@ class _BillsPanelState extends State<BillsPanel> {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(40, 4, 40, 40),
+      padding: const EdgeInsets.fromLTRB(40, 28, 40, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -672,8 +668,8 @@ class _AllBillsDialog extends StatelessWidget {
             'Stops this ${freqLabel(bill).split(' · ').first.toLowerCase()} '
             'bill and removes every upcoming due date. '
             '${paid == 0 ? 'No payments are logged for it.' : '$paid logged '
-                  '${paid == 1 ? 'payment stays' : 'payments stay'} in '
-                  'Transactions.'}',
+                      '${paid == 1 ? 'payment stays' : 'payments stay'} in '
+                      'Transactions.'}',
           ),
           actions: [
             TextButton(
@@ -701,14 +697,12 @@ class _AllBillsDialog extends StatelessWidget {
         final day = DateTime.now();
         final today = DateTime(day.year, day.month, day.day);
         final rows =
-            [
-              for (final b in store.bills)
-                (b, JuwaStore.nextDue(b, today)),
-            ]..sort((a, b) {
-              if (a.$2 == null) return b.$2 == null ? 0 : 1;
-              if (b.$2 == null) return -1;
-              return a.$2!.compareTo(b.$2!);
-            });
+            [for (final b in store.bills) (b, JuwaStore.nextDue(b, today))]
+              ..sort((a, b) {
+                if (a.$2 == null) return b.$2 == null ? 0 : 1;
+                if (b.$2 == null) return -1;
+                return a.$2!.compareTo(b.$2!);
+              });
         return Dialog(
           backgroundColor: c.surface,
           shape: RoundedRectangleBorder(
@@ -793,7 +787,9 @@ class _BillLine extends StatelessWidget {
     final swatch = swatchFor(bill.color);
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 10, 12, 10),
-      decoration: BoxDecoration(border: Border(top: BorderSide(color: c.rule))),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: c.rule)),
+      ),
       child: Row(
         children: [
           Container(

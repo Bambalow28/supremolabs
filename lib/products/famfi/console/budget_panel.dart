@@ -34,7 +34,7 @@ class _BudgetPanelState extends State<BudgetPanel> {
     final targetAll = store.budgets.fold(0.0, (s, b) => s + b.monthlyTarget);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(40, 4, 40, 40),
+      padding: const EdgeInsets.fromLTRB(40, 28, 40, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

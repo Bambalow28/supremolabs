@@ -62,8 +62,14 @@ class _LedgerPanelState extends State<LedgerPanel> {
     ),
   );
 
+  // Every transaction id seen on the previous build; null until the first one
+  // so the initial list staggers in instead of every row popping.
+  Set<String>? _known;
+
   List<Widget> _byDay(BuildContext context, List<Transaction> shown) {
     final c = context.c;
+    final known = _known;
+    _known = {for (final t in widget.store.transactions) t.id};
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final out = <Widget>[];
@@ -98,20 +104,22 @@ class _LedgerPanelState extends State<LedgerPanel> {
           ),
         );
       }
-      out.add(
-        Reveal(
-          index: i++,
-          child: _TxRow(
-            store: widget.store,
-            tx: t,
-            onTap: () => openTransactionDetail(
-              widget.store,
-              t,
-              openDrawer: widget.openDrawer,
-              closeDrawer: widget.closeDrawer,
-            ),
-          ),
+      final row = _TxRow(
+        store: widget.store,
+        tx: t,
+        onTap: () => openTransactionDetail(
+          widget.store,
+          t,
+          openDrawer: widget.openDrawer,
+          closeDrawer: widget.closeDrawer,
         ),
+      );
+      // Keyed by id so a row added at the top is the one that animates, not
+      // whichever row the positional state happened to land on.
+      out.add(
+        known != null && !known.contains(t.id)
+            ? _PopIn(key: ValueKey(t.id), child: row)
+            : Reveal(key: ValueKey(t.id), index: i++, child: row),
       );
     }
     return out;
@@ -166,7 +174,7 @@ class _LedgerPanelState extends State<LedgerPanel> {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(40, 4, 40, 40),
+      padding: const EdgeInsets.fromLTRB(40, 28, 40, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -681,6 +689,34 @@ class _MonthArrow extends StatelessWidget {
       child: Icon(icon, size: 20, color: context.c.muted),
     ),
   );
+}
+
+/// A just-added row: fades in, drops a few px and overshoots its size once.
+class _PopIn extends StatelessWidget {
+  final Widget child;
+  const _PopIn({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.of(context).disableAnimations) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 620),
+      curve: Curves.easeOutBack,
+      builder: (context, t, c) => Opacity(
+        opacity: t.clamp(0.0, 1.0),
+        child: Transform.translate(
+          offset: Offset(0, -14 * (1 - t)),
+          child: Transform.scale(
+            scale: 0.96 + 0.04 * t,
+            alignment: Alignment.topCenter,
+            child: c,
+          ),
+        ),
+      ),
+      child: child,
+    );
+  }
 }
 
 class _TxRow extends StatelessWidget {

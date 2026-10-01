@@ -4,6 +4,9 @@
 import 'package:flutter/material.dart';
 import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
+import 'package:juwa_wealth/ui/accounts/wallet_card.dart' show WalletCard;
+import 'package:juwa_wealth/ui/transactions/transactions_screen.dart'
+    show newestFirst;
 import 'package:juwa_wealth/widgets.dart';
 
 import '../ff_theme.dart';
@@ -173,13 +176,9 @@ class WalletRail extends StatelessWidget {
                         opacity: dim ? 0.32 : 1,
                         child: SizedBox(
                           width: compact ? 260 : null,
-                          child: FFCard(
-                            name: a.name,
-                            kind: a.kind.label,
-                            stamp: a.owner.label,
-                            color: a.color,
-                            icon: a.icon,
-                            balance: store.balanceOf(a.id),
+                          child: _RailCard(
+                            store: store,
+                            account: a,
                             delta: deltas[a.id],
                             selected: selectedAccountId == a.id,
                           ),
@@ -263,7 +262,10 @@ class WalletRail extends StatelessWidget {
                             ? emptyNote
                             // Tall enough for a card whose kind+stamp wraps to
                             // its own line plus a delta pill below it.
-                            : SizedBox(height: 120, child: cards),
+                            : SizedBox(
+                                height: WalletCard.fullHeight + 32,
+                                child: cards,
+                              ),
                         addButton,
                       ],
                     ),
@@ -357,6 +359,86 @@ class WalletRail extends StatelessWidget {
   }
 }
 
+/// The app's wallet card — latest three transactions and this month's in/out
+/// on the card itself — with the pending-payday pill and selection ring the
+/// rail adds.
+class _RailCard extends StatelessWidget {
+  final JuwaStore store;
+  final Account account;
+  final double? delta;
+  final bool selected;
+  const _RailCard({
+    required this.store,
+    required this.account,
+    required this.delta,
+    required this.selected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final txs = [
+      for (final t in store.transactions)
+        if (t.accountId == account.id) t,
+    ]..sort(newestFirst);
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, 1);
+    final month = txs.where((t) => !t.date.isBefore(start));
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: delta == null ? 0 : 26),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: selected ? Border.all(color: c.ink, width: 2) : null,
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(selected ? 4 : 0),
+              child: WalletCard(
+                account: account,
+                balance: store.balanceOf(account.id),
+                recent: txs,
+                monthIn: month
+                    .where((t) => t.amount > 0)
+                    .fold<double>(0, (s, t) => s + t.amount),
+                monthOut: month
+                    .where((t) => t.amount < 0)
+                    .fold<double>(0, (s, t) => s - t.amount),
+              ),
+            ),
+          ),
+          if (delta != null)
+            Positioned(
+              left: 14,
+              bottom: -24,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: c.surface,
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: c.rule),
+                ),
+                child: Text(
+                  ffAmount(delta!),
+                  style: ff(
+                    11.5,
+                    weight: FontWeight.w700,
+                    color: moneyColor(delta!),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// An account card's shape while it loads: icon tile, name and type lines,
 /// balance chip — on a surface card so it reads against the ground.
 class _AccountSkeleton extends StatelessWidget {
@@ -365,13 +447,14 @@ class _AccountSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 64),
+      constraints: const BoxConstraints(minHeight: WalletCard.fullHeight),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
         color: context.c.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SkeletonBox(
             width: 34,

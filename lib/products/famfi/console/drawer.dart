@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
+import 'package:juwa_wealth/ui/accounts/wallet_card.dart' show PhysicalCard;
+import 'package:juwa_wealth/ui/transactions/transactions_screen.dart'
+    show dayLabel, newestFirst;
 import 'package:juwa_wealth/ui/bills/bills_screen.dart' show freqLabel;
 import 'package:juwa_wealth/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -104,6 +107,30 @@ class DrawerScaffold extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The app's AmountField, but left-aligned — it centres by default, which
+/// reads oddly in a drawer form where every other field starts at the left.
+class DAmount extends StatelessWidget {
+  final TextEditingController controller;
+  final double fontSize;
+  final ValueChanged<String>? onChanged;
+  const DAmount({
+    super.key,
+    required this.controller,
+    this.fontSize = 18,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) => TextFormField(
+    controller: controller,
+    onChanged: onChanged,
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    inputFormatters: const [MoneyTextFormatter()],
+    style: JuwaTheme.figure(context, size: fontSize),
+    decoration: const InputDecoration(prefixText: r'$'),
+  );
 }
 
 class DField extends StatelessWidget {
@@ -416,7 +443,7 @@ class _AccountDrawerState extends State<AccountDrawer> {
         ),
         DField(
           label: _owes ? 'Amount owed' : 'Starting balance',
-          child: AmountField(
+          child: DAmount(
             controller: _balance,
             fontSize: 16,
             onChanged: (_) => setState(() {}),
@@ -462,46 +489,6 @@ class _AccountDrawerState extends State<AccountDrawer> {
           ),
         ),
         if (widget.account != null) ...[
-          Builder(
-            builder: (context) {
-              final recent =
-                  widget.store.transactions
-                      .where((t) => t.accountId == widget.account!.id)
-                      .toList()
-                    ..sort((a, b) => b.date.compareTo(a.date));
-              return DField(
-                label: 'Recent',
-                child: recent.isEmpty
-                    ? Text('No transactions yet', style: ff(13, color: c.muted))
-                    : Column(
-                        children: [
-                          for (final t in recent.take(5))
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      t.name,
-                                      style: ff(13.5, color: c.ink),
-                                    ),
-                                  ),
-                                  Text(
-                                    ffAmount(t.amount),
-                                    style: ff(
-                                      13.5,
-                                      weight: FontWeight.w700,
-                                      color: t.amount > 0 ? c.good : c.bad,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-              );
-            },
-          ),
           const SizedBox(height: 4),
           OutlinedButton(
             onPressed: () => _confirm(
@@ -688,18 +675,18 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
           onChanged: (i) => setState(() => _received = i == 1),
         ),
         DField(
-          label: 'Amount',
-          child: AmountField(
-            controller: _amount,
-            fontSize: 18,
-            onChanged: (_) => setState(() {}),
-          ),
-        ),
-        DField(
           label: 'Name',
           child: TextField(
             controller: _name,
             style: ff(15, color: c.ink),
+          ),
+        ),
+        DField(
+          label: 'Amount',
+          child: DAmount(
+            controller: _amount,
+            fontSize: 18,
+            onChanged: (_) => setState(() {}),
           ),
         ),
         DField(
@@ -950,7 +937,7 @@ class _BillDrawerState extends State<BillDrawer> {
           ),
         DField(
           label: 'Amount',
-          child: AmountField(
+          child: DAmount(
             controller: _amount,
             fontSize: 18,
             onChanged: (_) => setState(() {}),
@@ -1162,11 +1149,11 @@ class _BudgetDrawerState extends State<BudgetDrawer> {
         ),
         DField(
           label: '${_period.label} target',
-          child: AmountField(controller: _target, fontSize: 18),
+          child: DAmount(controller: _target, fontSize: 18),
         ),
         DField(
           label: 'Spent this ${_period.noun}',
-          child: AmountField(controller: _spent, fontSize: 18),
+          child: DAmount(controller: _spent, fontSize: 18),
         ),
         if (widget.budget != null)
           OutlinedButton(
@@ -1433,6 +1420,26 @@ void openTransactionDetail(
   ),
 );
 
+/// Opens [a] read-only — its card, then every transaction on it; Edit swaps
+/// in the form.
+void openAccountDetail(
+  JuwaStore store,
+  Account a, {
+  required void Function(Widget drawer) openDrawer,
+  required VoidCallback closeDrawer,
+}) => openDrawer(
+  AccountDetailDrawer(
+    store: store,
+    accountId: a.id,
+    onClose: closeDrawer,
+    openDrawer: openDrawer,
+    closeDrawer: closeDrawer,
+    onEdit: () => openDrawer(
+      AccountDrawer(store: store, account: a, onClose: closeDrawer),
+    ),
+  ),
+);
+
 /// Opens [b] with every transaction in its category; Edit swaps in the form.
 void openBudgetDetail(
   JuwaStore store,
@@ -1573,6 +1580,117 @@ class TransactionDetailDrawer extends StatelessWidget {
           ),
         if (tx.receipt != null) receiptField(context, store, tx.receipt!),
       ],
+    );
+  }
+}
+
+// ------------------------------------------------------- account (detail)
+
+class AccountDetailDrawer extends StatelessWidget {
+  final JuwaStore store;
+  final String accountId;
+  final VoidCallback onClose;
+  final VoidCallback closeDrawer;
+  final VoidCallback onEdit;
+  final void Function(Widget drawer) openDrawer;
+  const AccountDetailDrawer({
+    super.key,
+    required this.store,
+    required this.accountId,
+    required this.onClose,
+    required this.closeDrawer,
+    required this.onEdit,
+    required this.openDrawer,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    // Read live: the drawer outlives edits and deletes.
+    return ListenableBuilder(
+      listenable: store,
+      builder: (context, _) {
+        final account = store.accounts
+            .where((a) => a.id == accountId)
+            .firstOrNull;
+        if (account == null) {
+          return DrawerScaffold(
+            title: 'Account',
+            onClose: onClose,
+            children: [Text('Account deleted', style: ff(14, color: c.muted))],
+          );
+        }
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final txs = [
+          for (final t in store.transactions)
+            if (t.accountId == account.id) t,
+        ]..sort(newestFirst);
+        final days = <DateTime, List<Transaction>>{};
+        for (final t in txs) {
+          days
+              .putIfAbsent(
+                DateTime(t.date.year, t.date.month, t.date.day),
+                () => [],
+              )
+              .add(t);
+        }
+        return DrawerScaffold(
+          title: account.name,
+          onClose: onClose,
+          action: _editButton(context, onEdit),
+          children: [
+            PhysicalCard(
+              account: account,
+              balance: store.balanceOf(account.id),
+            ),
+            if (txs.isEmpty)
+              Text('No transactions yet', style: ff(13.5, color: c.muted))
+            else
+              for (final e in days.entries)
+                DField(
+                  label: dayLabel(e.key, today),
+                  child: Column(
+                    children: [
+                      for (final t in e.value)
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => openTransactionDetail(
+                            store,
+                            t,
+                            openDrawer: openDrawer,
+                            closeDrawer: closeDrawer,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    t.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: ff(14, color: c.ink),
+                                  ),
+                                ),
+                                Text(
+                                  ffAmount(t.amount),
+                                  style: ff(
+                                    14,
+                                    weight: FontWeight.w700,
+                                    color: t.amount > 0 ? c.good : c.bad,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+          ],
+        );
+      },
     );
   }
 }

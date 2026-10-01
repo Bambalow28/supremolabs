@@ -7,7 +7,14 @@ import 'package:juwa_wealth/store.dart';
 // ignore: depend_on_referenced_packages
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supremolabs/products/famfi/console/csv_export.dart';
+import 'package:supremolabs/products/famfi/console/drawer.dart';
+import 'package:supremolabs/products/famfi/console/ledger_panel.dart';
 import 'package:supremolabs/products/famfi/famfi_console_page.dart';
+
+/// The ledger's copy of [text] — the wallet rail's cards list recent
+/// transactions too.
+Finder _inLedger(String text) =>
+    find.descendant(of: find.byType(LedgerPanel), matching: find.text(text));
 
 // These tests exercise FamFiConsoleBody directly, not FamFiConsolePage — the
 // page gates on Firebase Auth + household join (no Firebase in widget
@@ -212,7 +219,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Judy Chequing').first);
     await tester.pumpAndSettle();
-    // The drawer's name field must hold the account just opened.
+    // Read-only first: the drawer shows the account just opened, and Edit
+    // swaps in a form holding that account's name.
+    expect(find.byType(AccountDetailDrawer), findsOneWidget);
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, 'Judy Chequing'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Josh Chequing'), findsNothing);
   });
@@ -260,7 +271,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Transactions').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Loblaws'));
+    await tester.tap(_inLedger('Loblaws'));
     await tester.pumpAndSettle();
     expect(find.text('Transaction'), findsOneWidget);
     expect(find.text('Edit transaction'), findsNothing);
@@ -285,7 +296,13 @@ void main() {
     await tester.tap(find.text('Groceries'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Transactions · 1'), findsOneWidget);
-    expect(find.text('Loblaws'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(BudgetDetailDrawer),
+        matching: find.text('Loblaws'),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Edit'));
     await tester.pumpAndSettle();
     expect(find.text('Edit budget'), findsOneWidget);
@@ -302,14 +319,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Transactions').first);
     await tester.pumpAndSettle();
-    expect(find.text('Loblaws'), findsOneWidget);
+    expect(_inLedger('Loblaws'), findsOneWidget);
     await tester.tap(find.text('Filters'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip, 'Visa Infinite'));
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
     // Loblaws is on Judy's account, so the Visa filter drops it.
-    expect(find.text('Loblaws'), findsNothing);
+    expect(_inLedger('Loblaws'), findsNothing);
     await tester.tap(find.text('Export'));
     await tester.pumpAndSettle();
     expect(find.text('Export statement'), findsOneWidget);

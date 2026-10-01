@@ -100,7 +100,7 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
     // Skeleton until the household's first full snapshot lands — local
     // prefs may be empty or another household's stale copy.
     store.setLoading(true);
-    _sync = HouseholdSync(store, hid);
+    _sync = HouseholdSync(store, hid)..fromWeb = true;
     await _sync!.start(importLocal: false);
     // ponytail: a failed first snapshot only debugPrints in HouseholdSync, so
     // fall back to local data after 10s rather than skeleton forever; surface
@@ -119,7 +119,7 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
       final hid = _hid;
       if (hid == null) return;
       _sync?.stop();
-      _sync = HouseholdSync(store, hid);
+      _sync = HouseholdSync(store, hid)..fromWeb = true;
       await _sync!.start(importLocal: false);
     } finally {
       _refreshing = null;
@@ -193,10 +193,13 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
                     text:
                         "This Apple ID isn't in a household. Sign in with "
                         'the one you use on your phone.',
-                    action: ('Sign out', () {
-                      setState(() => _notMember = false);
-                      _auth!.signOut();
-                    }),
+                    action: (
+                      'Sign out',
+                      () {
+                        setState(() => _notMember = false);
+                        _auth!.signOut();
+                      },
+                    ),
                   )
                 : const _ConsoleSkeleton();
           }
@@ -446,6 +449,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
   // Separate from _drawerChild so a closing drawer keeps its form on screen
   // while it slides away, instead of emptying first.
   bool _drawerOpen = false;
+  bool _drawerSwap = false;
   // Last tab drawn and which way the strip moved to leave it, so the next
   // panel slides in from the side its tab sits on.
   FFTab _shownTab = FFTab.ledger;
@@ -596,6 +600,9 @@ class _ConsoleState extends State<FamFiConsoleBody> {
   // Keyed so opening item B over item A's drawer builds fresh form state
   // instead of reusing A's controllers (and saving A's values onto B).
   void openDrawer(Widget child) => setState(() {
+    // Cross-fade only when swapping over an open drawer; a fresh open is the
+    // panel itself sliding in, fully opaque.
+    _drawerSwap = _drawerOpen;
     _drawerChild = KeyedSubtree(key: UniqueKey(), child: child);
     _drawerOpen = true;
   });
@@ -871,7 +878,9 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                   // Item B over item A: A's form fades out
                                   // under B's rather than cutting.
                                   child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 220),
+                                    duration: Duration(
+                                      milliseconds: _drawerSwap ? 220 : 0,
+                                    ),
                                     child: _drawerChild ?? const SizedBox(),
                                   ),
                                 ),
@@ -893,8 +902,11 @@ class _ConsoleState extends State<FamFiConsoleBody> {
 
   void _openAccountDrawer(Account a) {
     setState(() => _selectedAccountId = a.id);
-    openDrawer(
-      AccountDrawer(store: widget.store, account: a, onClose: closeDrawer),
+    openAccountDetail(
+      widget.store,
+      a,
+      openDrawer: openDrawer,
+      closeDrawer: closeDrawer,
     );
   }
 
