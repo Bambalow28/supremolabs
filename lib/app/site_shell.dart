@@ -6,9 +6,7 @@
 // transit world — the hub's web is the map now, and a scroll-progress line
 // beside it was chrome asserting a metaphor the page no longer holds.
 //
-// The footer is the web restated at the bottom of the page: every reachable
-// product as a node in its own color, the one you are standing on lit, so the
-// end of a page is a junction rather than a dead end.
+// The footer is just the mark and build number; the web lives in the header.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,6 +15,9 @@ import '../theme/sl_theme.dart';
 import 'motion.dart';
 
 const slMaxContentWidth = 1120.0;
+
+const _build = String.fromEnvironment('BUILD', defaultValue: '0');
+final slVersion = '1.0.$_build';
 
 /// Scrolls [key]'s widget into view — used by product pages to resolve a
 /// nested route (e.g. `/travelsync/features`) to a station further down
@@ -225,7 +226,6 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final here = productForPath(ModalRoute.of(context)?.settings.name);
     return SLPage(
       maxWidth: maxWidth,
       padding: const EdgeInsets.fromLTRB(24, 40, 24, 48),
@@ -234,66 +234,16 @@ class _Footer extends StatelessWidget {
         children: [
           Divider(color: line, height: 1, thickness: 1),
           const SizedBox(height: 24),
-          Wrap(
-            spacing: 22,
-            runSpacing: 10,
-            children: [
-              for (final p in products.where((p) => p.route != null))
-                _NodeLink(product: p, current: identical(p, here)),
-            ],
-          ),
-          const SizedBox(height: 28),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('© SUPREMO LABS', style: SLType.eyebrow(SLColors.inkMuted)),
-              Text('SUPREMOLABS.COM', style: SLType.eyebrow(SLColors.inkMuted)),
-            ],
+          // The header already says where you are; the footer is just the
+          // mark and which build this is (CI run number; 0 locally).
+          Center(
+            child: Text(
+              '© SUPREMO LABS · $slVersion',
+              style: SLType.eyebrow(SLColors.inkMuted),
+            ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _NodeLink extends StatelessWidget {
-  final Product product;
-  final bool current;
-  const _NodeLink({required this.product, required this.current});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = lineInk(product.accent ?? SLColors.inkMuted);
-    return Hover(
-      onTap: current ? null : () => context.push(product.route!),
-      builder: (context, hovered) {
-        final lit = hovered || current;
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // The same marker the web and the lineup use, at footer scale.
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              width: lit ? 8 : 6,
-              height: lit ? 8 : 6,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: lit ? 1 : 0.45),
-              ),
-            ),
-            const SizedBox(width: 9),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 160),
-              style: SLType.body(
-                13,
-                color: lit ? color : SLColors.inkMuted,
-                weight: current ? FontWeight.w600 : FontWeight.w400,
-              ),
-              child: Text(product.name),
-            ),
-          ],
-        );
-      },
     );
   }
 }

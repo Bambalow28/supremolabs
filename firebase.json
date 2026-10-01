@@ -2,7 +2,7 @@
   "hosting": {
     "public": "build/web",
     "predeploy": [
-      "flutter build web --release --no-tree-shake-icons",
+      "flutter build web --release --no-tree-shake-icons --dart-define=BUILD=${GITHUB_RUN_NUMBER:-0}",
       "sh tool/stamp_build.sh"
     ],
     "ignore": [
