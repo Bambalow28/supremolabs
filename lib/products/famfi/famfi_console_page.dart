@@ -863,25 +863,37 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                       ),
                                     ],
                                   ),
-                            AnimatedPositioned(
-                              duration: const Duration(milliseconds: 360),
-                              curve: Curves.easeOutQuart,
+                            // Parked at the right edge and slid with a paint-only
+                            // transform (not a re-laid-out Positioned) so the
+                            // form doesn't relayout every frame of the slide.
+                            Positioned(
                               top: 0,
                               bottom: 0,
-                              right: _drawerOpen ? 0 : -460,
+                              right: 0,
                               width: 440,
-                              child: Material(
-                                elevation: 12,
-                                // Offscreen form stays out of tab order.
-                                child: ExcludeFocus(
-                                  excluding: !_drawerOpen,
-                                  // Item B over item A: A's form fades out
-                                  // under B's rather than cutting.
-                                  child: AnimatedSwitcher(
-                                    duration: Duration(
-                                      milliseconds: _drawerSwap ? 220 : 0,
+                              child: IgnorePointer(
+                                ignoring: !_drawerOpen,
+                                child: AnimatedSlide(
+                                  duration: const Duration(milliseconds: 460),
+                                  curve: Curves.easeOutCubic,
+                                  offset: Offset(_drawerOpen ? 0 : 1.1, 0),
+                                  child: RepaintBoundary(
+                                    child: Material(
+                                      elevation: 12,
+                                      // Offscreen form stays out of tab order.
+                                      child: ExcludeFocus(
+                                        excluding: !_drawerOpen,
+                                        // Item B over item A: A's form fades
+                                        // out under B's rather than cutting.
+                                        child: AnimatedSwitcher(
+                                          duration: Duration(
+                                            milliseconds: _drawerSwap ? 220 : 0,
+                                          ),
+                                          child:
+                                              _drawerChild ?? const SizedBox(),
+                                        ),
+                                      ),
                                     ),
-                                    child: _drawerChild ?? const SizedBox(),
                                   ),
                                 ),
                               ),
