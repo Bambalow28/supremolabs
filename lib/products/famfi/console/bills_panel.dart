@@ -484,6 +484,7 @@ class _Lists extends StatelessWidget {
                           today: today,
                           onMarkPaid: onMarkPaid,
                           onOpen: onOpen,
+                          last: i == before.length - 1,
                         ),
                       ),
                   ],
@@ -520,6 +521,7 @@ class _Lists extends StatelessWidget {
                           today: today,
                           onMarkPaid: onMarkPaid,
                           onOpen: onOpen,
+                          last: i == later.length - 1,
                         ),
                       ),
                   ],
@@ -537,6 +539,9 @@ class _Row extends StatefulWidget {
   final DateTime today;
   final Future<void> Function(Bill, DateTime) onMarkPaid;
   final void Function(Bill) onOpen;
+
+  /// The list's final row: no rule beneath it.
+  final bool last;
   const _Row({
     required this.store,
     required this.bill,
@@ -544,6 +549,7 @@ class _Row extends StatefulWidget {
     required this.today,
     required this.onMarkPaid,
     required this.onOpen,
+    this.last = false,
   });
 
   @override
@@ -572,7 +578,9 @@ class _RowState extends State<_Row> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: c.rule)),
+              border: widget.last
+                  ? null
+                  : Border(bottom: BorderSide(color: c.rule)),
             ),
             child: Row(
               children: [
