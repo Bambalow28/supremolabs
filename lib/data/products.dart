@@ -128,22 +128,6 @@ const products = <Product>[
     ),
   ),
   Product(
-    name: 'WealthSync',
-    category: 'Finance',
-    tagline: 'Personal finance, without the spreadsheet.',
-    cluster: Cluster.money,
-    route: '/wealthsync',
-    ground: Color(0xFF1D1D1D),
-    accent: Color(0xFF465C88), // ws_colors.dart toolColor
-    screen: 'assets/wealthsync/main_page.png',
-    story: Story(
-      problem: "Money sits across accounts, apps and spreadsheets.",
-      mine:
-          "The goal is all-in-one finance management. It is still taking shape.",
-      mineLabel: 'Where it is headed',
-    ),
-  ),
-  Product(
     name: 'NoteSync',
     category: 'Notes',
     tagline: 'Notes that stay yours.',
@@ -165,12 +149,13 @@ const products = <Product>[
     tagline: 'Every first, kept.',
     cluster: Cluster.people,
     route: '/diamo',
-    ground: Color(0xFF1C1216),
-    accent: Color(0xFF7A3145), // app_theme.dart diaMoTheme seed color
+    ground: Color(0xFF211C4D), // app_theme.dart AppColors.dark.background
+    accent: Color(0xFFFFD35C), // app_theme.dart AppColors.butter
     story: Story(
       problem:
           "Early motherhood is scattered across group chats, photos and notes.",
-      mine: "A hub for mothers.",
+      mine:
+          "A hub for mothers: a mobile of memories to hang, and other moms to learn from.",
       mineLabel: 'What it is for',
     ),
   ),

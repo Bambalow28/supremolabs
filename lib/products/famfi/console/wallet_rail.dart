@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
 import 'package:juwa_wealth/ui/accounts/wallet_card.dart' show WalletCard;
-import 'package:juwa_wealth/ui/transactions/transactions_screen.dart'
-    show newestFirst;
 import 'package:juwa_wealth/widgets.dart';
 
 import '../ff_theme.dart';
@@ -390,13 +388,6 @@ class _RailCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final txs = [
-      for (final t in store.transactions)
-        if (t.accountId == account.id) t,
-    ]..sort(newestFirst);
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month, 1);
-    final month = txs.where((t) => !t.date.isBefore(start));
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
@@ -415,13 +406,6 @@ class _RailCard extends StatelessWidget {
               child: WalletCard(
                 account: account,
                 balance: store.balanceOf(account.id),
-                recent: txs,
-                monthIn: month
-                    .where((t) => t.amount > 0)
-                    .fold<double>(0, (s, t) => s + t.amount),
-                monthOut: month
-                    .where((t) => t.amount < 0)
-                    .fold<double>(0, (s, t) => s - t.amount),
               ),
             ),
           ),

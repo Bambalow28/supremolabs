@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Flutter **web** app. The parent business site — `supremolabs.com` — hosting
-every other project under a path: `/wealthsync`, `/travelsync`, `/plansync`,
+every other project under a path: `/famfi`, `/travelsync`, `/plansync`,
 etc. Not a twin of any single app; it's the umbrella all of them sit under.
 
 Layout: Dart, `pubspec.yaml`, `lib/`, `test/`.
@@ -22,7 +22,7 @@ serve a stale icon font or `main.dart.js`; put `flutter` on PATH first).
 Firebase and Supabase start in the background (`lib/app/backends.dart`); pages
 that need one are wrapped in `BackendGate`.
 SPA rewrite (`**` → `/index.html`) is in `firebase.json`. Per-product routing:
-each product (`/travelsync`, `/wealthsync`, etc.) is its own dedicated page
+each product (`/travelsync`, `/famfi`, etc.) is its own dedicated page
 within this app, styled to match that product's own site/branding (e.g.
 `/travelsync` mirrors travelsync_website's look) — not a deep-link redirect
 out. Custom domain `supremolabs.com` is connected via Firebase Hosting (DNS

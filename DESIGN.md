@@ -12,7 +12,7 @@ colors:
   studio-signal-hover: "#FFC04D"
   sleeve-ink-light: "#F7F7F5"
   travelsync: "#4B76FA"
-  wealthsync: "#465C88"
+  famfi: "#2E5BE8"
   plansync: "#2DD4BF"
   notesync: "#4CAF55"
   workit: "#4A9DFF"
@@ -113,7 +113,7 @@ numbering on the site, always derived from list order and set in tabular
 figures. Never type a catalog number, never renumber by reordering for taste.
 
 **The Real Screen or Type Rule.** A sleeve shows a real shipped app screen
-(`Product.screen`, today TravelSync, WealthSync, WorkIt) or it sets the
+(`Product.screen`, today TravelSync, WorkIt) or it sets the
 release's name typographically. Never a mock, stand-in, or generated screen.
 
 **The Keyline Means Forthcoming Rule.** Out now is solid; forthcoming is a
@@ -130,7 +130,7 @@ actions (the liner-notes link) and chrome off product routes.
 - Ink `#F2F4F7`; muted ink `#8B93A1` for body copy, labels, and every
   forthcoming mark.
 - Studio signal `#FFB020`, hover `#FFC04D`.
-- Release colors: TravelSync `#4B76FA`, WealthSync `#465C88`, PlanSync
+- Release colors: TravelSync `#4B76FA`, FamFi `#2E5BE8`, PlanSync
   `#2DD4BF`, NoteSync `#4CAF55`, WorkIt `#4A9DFF`, Diamo `#7A3145`,
   Stanverse `#F5F2EC`.
 
@@ -266,7 +266,7 @@ The footer lists every product with a route, each with a small dot in its
 ## Nested routes: sections with their own address
 
 A product's marketing sections are addressable, bookmarkable sub-routes
-(e.g. `/travelsync/features`, `/wealthsync/tracker`, `/plansync/itinerary`,
+(e.g. `/travelsync/features`, `/famfi/personal`, `/plansync/itinerary`,
 `/notesync/folders`) rather than separate pages; each product page accepts
 an `initialSection` and scrolls to that section's `GlobalKey` on load
 (`scrollToSection()` in `site_shell.dart`). The sub-routes are bookmarkable
@@ -300,7 +300,7 @@ but not visibly listed anywhere on the page itself.
 - **Flat.** No shadows, gradients, or glassmorphism on the hub. Depth is the
   spine lifting out of the crate and the screen rising from the sleeve.
 
-## Product pages (`/travelsync`, `/wealthsync`, `/plansync`, `/notesync`, `/workit`)
+## Product pages (`/travelsync`, `/famfi`, `/plansync`, `/notesync`, `/workit`)
 
 Everything above governs the **studio chrome, hub, and about page**. A
 product route splits in two:

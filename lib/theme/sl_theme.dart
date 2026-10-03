@@ -17,7 +17,7 @@ class SLColors {
 
 /// A product's line color, lifted until it clears 4.5:1 against the studio
 /// ground. Each accent was picked for that product's *own* surfaces —
-/// WealthSync's slate and Diamo's plum are legible there and are not legible
+/// a deep product accent can be legible on that product's own surfaces and not legible
 /// as 12px type on near-black — so the chrome uses this, never the raw value.
 Color lineInk(Color c) {
   const target = 0.20; // luminance that clears 4.5:1 against SLColors.ground

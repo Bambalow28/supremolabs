@@ -14,7 +14,6 @@ import '../products/plansync/plansync_page.dart';
 import '../products/stanverse/desk/stanverse_desk_page.dart';
 import '../products/stanverse/stanverse_page.dart';
 import '../products/travelsync/travelsync_page.dart';
-import '../products/wealthsync/wealthsync_page.dart';
 import '../products/workit/desk/workit_desk_page.dart';
 import '../products/workit/workit_legal_page.dart';
 import '../products/workit/workit_page.dart';
@@ -30,9 +29,6 @@ final pages = <String, WidgetBuilder>{
   '/travelsync': (_) => TravelSyncPage(),
   '/travelsync/features': (_) => TravelSyncPage(initialSection: 'features'),
   '/travelsync/download': (_) => TravelSyncPage(initialSection: 'download'),
-  '/wealthsync': (_) => WealthSyncPage(),
-  '/wealthsync/features': (_) => WealthSyncPage(initialSection: 'features'),
-  '/wealthsync/tracker': (_) => WealthSyncPage(initialSection: 'tracker'),
   '/plansync': (_) => const PlanSyncPage(),
   '/plansync/itinerary': (_) => const PlanSyncPage(initialSection: 'itinerary'),
   '/plansync/places': (_) => const PlanSyncPage(initialSection: 'places'),
@@ -72,6 +68,9 @@ final rootNavigatorKey = GlobalKey<NavigatorState>();
 /// entry (the plain `Navigator.pushNamed` this replaced only rewrote the
 /// current one — the back button had nothing to go back to).
 final appRouter = GoRouter(
+  // WealthSync became FamFi; old links land on the new page.
+  redirect: (context, state) =>
+      state.uri.path.startsWith('/wealthsync') ? '/famfi' : null,
   navigatorKey: rootNavigatorKey,
   // An unknown path renders the home page in place, same as the old
   // fallback — no redirect, so a mistyped/borrowed link doesn't bounce.

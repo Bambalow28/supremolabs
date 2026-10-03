@@ -15,7 +15,7 @@ spine in a crate, followed by a discography and liner notes. Each product also g
 ## What's here
 
 - **Catalog home.** The full lineup, with one sleeve pulled face-out in that product's own colour.
-- **Product pages.** `/workit`, `/travelsync`, `/wealthsync`, `/plansync`, `/notesync`, `/stanverse`, `/diamo`…
+- **Product pages.** `/workit`, `/travelsync`, `/famfi`, `/plansync`, `/notesync`, `/stanverse`, `/diamo`…
 - **Legal.** Privacy and terms pages for products that don't have a site of their own.
 - **WorkIt desk.** Admin tools, including the Challenges review.
 

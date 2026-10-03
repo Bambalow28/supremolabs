@@ -5,7 +5,6 @@
 // blue-black ground, full-colour wallet cards, HIS/HERS/JOINT stamps. This
 // public page never names Josh or Judy: only the anonymised owner stamps.
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../app/site_shell.dart';
 import 'ff_theme.dart';
@@ -93,7 +92,7 @@ class FamFiPage extends StatelessWidget {
 
     return SiteShell(
       ground: FFColors.ground,
-      trailing: _OpenConsoleLink(),
+      trailing: const _SoonTag(),
       children: [
         Theme(
           data: famFiTheme(Brightness.dark),
@@ -116,45 +115,19 @@ class FamFiPage extends StatelessWidget {
   }
 }
 
-class _OpenConsoleLink extends StatefulWidget {
-  @override
-  State<_OpenConsoleLink> createState() => _OpenConsoleLinkState();
-}
-
-class _OpenConsoleLinkState extends State<_OpenConsoleLink> {
-  bool _hover = false;
+class _SoonTag extends StatelessWidget {
+  const _SoonTag();
 
   @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        onTap: () => context.push('/famfi/personal'),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'OPEN CONSOLE',
-              style: ff(
-                12,
-                weight: FontWeight.w700,
-                spacing: 2.2,
-                color: _hover ? Colors.white : FFColors.accentInk,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Icon(
-              Icons.arrow_forward_rounded,
-              size: 15,
-              color: _hover ? Colors.white : FFColors.accentInk,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Text(
+    'COMING SOON',
+    style: ff(
+      12,
+      weight: FontWeight.w700,
+      spacing: 2.2,
+      color: FFColors.accentInk,
+    ),
+  );
 }
 
 // ─── Hero ───────────────────────────────────────────────────────────────────
@@ -195,12 +168,12 @@ class _Hero extends StatelessWidget {
           spacing: 22,
           runSpacing: 16,
           children: [
-            _PrimaryButton(onTap: () => context.push('/famfi/personal')),
+            const _SoonPill(),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 260),
               child: Text(
-                'Private to one household.\niPhone via TestFlight · not on '
-                'the App Store.',
+                'FamFi is on its way to iPhone.\nTake a look around while we '
+                'finish it.',
                 style: ff(13.5, height: 1.45, color: const Color(0xFF8E96A3)),
               ),
             ),
@@ -326,52 +299,22 @@ class _BrandMark extends StatelessWidget {
   }
 }
 
-class _PrimaryButton extends StatefulWidget {
-  final VoidCallback onTap;
-  const _PrimaryButton({required this.onTap});
+class _SoonPill extends StatelessWidget {
+  const _SoonPill();
 
   @override
-  State<_PrimaryButton> createState() => _PrimaryButtonState();
-}
-
-class _PrimaryButtonState extends State<_PrimaryButton> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          decoration: BoxDecoration(
-            color: _hover ? const Color(0xFF3D68F0) : FFColors.accent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Open the console',
-                style: ff(15, weight: FontWeight.w700, color: Colors.white),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.arrow_forward_rounded,
-                size: 18,
-                color: Colors.white,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+    decoration: BoxDecoration(
+      color: FFColors.accent.withValues(alpha: 0.16),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: FFColors.accent.withValues(alpha: 0.6)),
+    ),
+    child: Text(
+      'Coming soon',
+      style: ff(15, weight: FontWeight.w700, color: Colors.white),
+    ),
+  );
 }
 
 /// The stacked wallet: six cards, each stepped 64px lower than the last.
