@@ -56,9 +56,9 @@ class Product {
   /// the chrome while you are on its route. Null falls back to muted ink.
   final Color? accent;
 
-  /// A real app screen for the release's sleeve. Null sets the sleeve
-  /// typographically — never a stand-in screenshot.
-  final String? screen;
+  /// The app's own icon, as shipped to the App Store. Null where the app has
+  /// no real icon yet — those set a keyline monogram, never a stand-in.
+  final String? icon;
 
   /// Null for products without a page.
   final Story? story;
@@ -71,7 +71,7 @@ class Product {
     this.route,
     this.ground,
     this.accent,
-    this.screen,
+    this.icon,
     this.story,
   });
 
@@ -89,7 +89,7 @@ const products = <Product>[
     route: '/workit',
     ground: Color(0xFF0B0C0E),
     accent: Color(0xFF4A9DFF), // WorkItColors.dark().tint
-    screen: 'assets/workit/today.png',
+    icon: 'assets/icons/workit.png',
     story: Story(
       problem: "Health tracking gets split across a dozen single-purpose apps.",
       mine:
@@ -105,7 +105,7 @@ const products = <Product>[
     route: '/travelsync',
     ground: Color(0xFF0B0F1A),
     accent: Color(0xFF4B76FA), // ts_colors.dart primaryBlue
-    screen: 'assets/travelsync/home.png',
+    icon: 'assets/icons/travelsync.png',
     story: Story(
       problem: "Trip photos and memories get buried in a camera roll.",
       mine: "It keeps my memories from travel, as travel cards.",
@@ -118,6 +118,7 @@ const products = <Product>[
     tagline: 'Plans that actually happen.',
     cluster: Cluster.journeys,
     route: '/plansync',
+    icon: 'assets/icons/plansync.png',
     ground: Color(0xFF0A0E14),
     accent: Color(0xFF2DD4BF), // ps_colors.dart accent
     story: Story(
@@ -133,6 +134,7 @@ const products = <Product>[
     tagline: 'Notes that stay yours.',
     cluster: Cluster.everyday,
     route: '/notesync',
+    icon: 'assets/icons/notesync.png',
     ground: Color(0xFF000000),
     accent: Color(0xFF0A84FF), // ns_colors.dart accent
     story: Story(
@@ -149,6 +151,7 @@ const products = <Product>[
     tagline: 'Every first, kept.',
     cluster: Cluster.people,
     route: '/diamo',
+    icon: 'assets/icons/diamo.png',
     ground: Color(0xFF211C4D), // app_theme.dart AppColors.dark.background
     accent: Color(0xFFFFD35C), // app_theme.dart AppColors.butter
     story: Story(
@@ -165,6 +168,7 @@ const products = <Product>[
     tagline: 'Your fandom, live.',
     cluster: Cluster.people,
     route: '/stanverse',
+    icon: 'assets/icons/stanverse.png',
     ground: Color(0xFF0E0D10),
     accent: Color(0xFFF5F2EC), // stanverse_theme.dart StanTicker.paper
     story: Story(
@@ -180,12 +184,30 @@ const products = <Product>[
     tagline: 'One wallet for the two of us.',
     cluster: Cluster.money,
     route: '/famfi',
+    icon: 'assets/icons/famfi.png',
     ground: Color(0xFF0C0E12), // juwa_wealth JuwaColors.dark().bg
     accent: Color(0xFF2E5BE8), // juwa_wealth swatch 'cobalt'
     story: Story(
       problem:
           "Two people, shared bills, and no single view of the household's money.",
       mine: "Household finance management — one wallet for the two of us.",
+      mineLabel: 'In my day',
+    ),
+  ),
+  Product(
+    name: 'ESYNC',
+    category: 'Electric vehicles',
+    tagline: 'Know what every charge costs.',
+    cluster: Cluster.journeys,
+    route: '/esync',
+    icon: 'assets/icons/esync.png',
+    ground: Color(0xFF05080B), // esync theme.dart C.glass
+    accent: Color(0xFF2EE6FF), // esync theme.dart C.volt
+    story: Story(
+      problem:
+          "Owning an EV is split across a charging log, a service list and a forum.",
+      mine:
+          "One hub for my Tesla: what each charge cost, what is due next, and the owners to ask.",
       mineLabel: 'In my day',
     ),
   ),
@@ -206,6 +228,7 @@ const products = <Product>[
     category: 'Lifestyle',
     tagline: 'Your closet, organized.',
     cluster: Cluster.everyday,
+    icon: 'assets/icons/dressmeup.png',
   ),
 ];
 

@@ -6,6 +6,7 @@ import 'backends.dart';
 import '../data/products.dart';
 import '../home/home_page.dart';
 import '../products/diamo/diamo_page.dart';
+import '../products/esync/esync_page.dart';
 import '../products/famfi/famfi_console_page.dart';
 import '../products/famfi/famfi_page.dart';
 import '../products/notesync/notesync_page.dart';
@@ -54,6 +55,10 @@ final pages = <String, WidgetBuilder>{
   '/stanverse/marketplace': (_) => StanversePage(initialSection: 'marketplace'),
   // Private back office — deliberately not linked from any public page.
   '/stanverse/desk': (_) => const BackendGate(child: StanverseDeskPage()),
+  '/esync': (_) => const ESyncPage(),
+  '/esync/charges': (_) => const ESyncPage(initialSection: 'charges'),
+  '/esync/service': (_) => const ESyncPage(initialSection: 'service'),
+  '/esync/boards': (_) => const ESyncPage(initialSection: 'boards'),
   '/famfi': (_) => const FamFiPage(),
   // The desktop console — every control the phone app has. Linked from
   // /famfi's nav and hero.
@@ -91,9 +96,10 @@ final appRouter = GoRouter(
   ],
 );
 
-/// Replaces the default page cut with a wipe in the destination's line color:
-/// the band sweeps in over the page you are leaving, then off the far side to
-/// reveal the one you asked for.
+/// Replaces the default page cut. The arriving page rises into place while a
+/// rule in the destination's line color draws across the top; the page you are
+/// leaving sinks back and dims, so the move reads as depth, not a swap. Pops
+/// run the same motion in reverse.
 class LineSweepPage extends CustomTransitionPage<void> {
   LineSweepPage({
     required String path,
@@ -103,70 +109,78 @@ class LineSweepPage extends CustomTransitionPage<void> {
          key: ValueKey(path),
          name: path,
          child: Builder(builder: builder),
-         transitionDuration: const Duration(milliseconds: 620),
-         reverseTransitionDuration: const Duration(milliseconds: 520),
-         transitionsBuilder: (context, animation, _, child) {
-           // A viewer who asked the OS to stop animation gets the page. Same
-           // for the very first page in the stack (a hard reload or a fresh
-           // deep link, with no previous page to sweep over) — animating
-           // that in release/dart2js hits a framework null-check crash, since
-           // there's nothing behind the band to reveal.
-           if ((MediaQuery.maybeOf(context)?.disableAnimations ?? false) ||
-               (ModalRoute.of(context)?.isFirst ?? true)) {
+         transitionDuration: const Duration(milliseconds: 760),
+         reverseTransitionDuration: const Duration(milliseconds: 480),
+         transitionsBuilder: (context, animation, secondary, child) {
+           // A viewer who asked the OS to stop animation gets the page.
+           if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
              return child;
            }
-           return Stack(
-             children: [
-               // The arriving page appears behind the band, once the band
-               // has covered the screen.
-               FadeTransition(
-                 opacity: CurvedAnimation(
-                   parent: animation,
-                   curve: const Interval(0.5, 0.72),
-                 ),
-                 child: child,
+           const expo = Cubic(0.16, 1, 0.3, 1);
+           final enter = CurvedAnimation(
+             parent: animation,
+             curve: expo,
+             reverseCurve: Curves.easeInCubic,
+           );
+           final leave = CurvedAnimation(parent: secondary, curve: expo);
+           return AnimatedBuilder(
+             animation: leave,
+             builder: (context, page) => Opacity(
+               opacity: 1 - 0.55 * leave.value,
+               child: Transform.scale(
+                 scale: 1 - 0.03 * leave.value,
+                 child: page,
                ),
-               IgnorePointer(
-                 child: AnimatedBuilder(
-                   animation: animation,
-                   builder: (context, _) => CustomPaint(
-                     size: Size.infinite,
-                     painter: _SweepPainter(color: line, t: animation.value),
+             ),
+             child: Stack(
+               children: [
+                 FadeTransition(
+                   opacity: CurvedAnimation(
+                     parent: animation,
+                     curve: const Interval(0, 0.55, curve: Curves.easeOut),
+                   ),
+                   child: SlideTransition(
+                     position: Tween(
+                       begin: const Offset(0, 0.045),
+                       end: Offset.zero,
+                     ).animate(enter),
+                     child: child,
                    ),
                  ),
-               ),
-             ],
+                 IgnorePointer(
+                   child: AnimatedBuilder(
+                     animation: animation,
+                     builder: (context, _) => CustomPaint(
+                       size: Size.infinite,
+                       painter: _RulePainter(color: line, t: animation.value),
+                     ),
+                   ),
+                 ),
+               ],
+             ),
            );
          },
        );
 }
 
-class _SweepPainter extends CustomPainter {
+/// A 3px rule drawing left to right across the top of the viewport, then
+/// lifting away once the page has landed.
+class _RulePainter extends CustomPainter {
   final Color color;
   final double t;
-  _SweepPainter({required this.color, required this.t});
+  _RulePainter({required this.color, required this.t});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (t <= 0 || t >= 1) return;
-    final e = Curves.easeInOutCubic.transform(t);
-    // First half the band covers from the left; second half its trailing
-    // edge leaves the same way, uncovering the new page.
-    final left = e < 0.5 ? 0.0 : size.width * (e - 0.5) * 2;
-    final right = e < 0.5 ? size.width * e * 2 : size.width;
+    final draw = Curves.easeOutCubic.transform((t / 0.6).clamp(0.0, 1.0));
+    final fade = 1 - ((t - 0.6) / 0.4).clamp(0.0, 1.0);
     canvas.drawRect(
-      Rect.fromLTRB(left, 0, right, size.height),
-      Paint()..color = color,
-    );
-    // A brighter leading rule, so the band reads as a line travelling rather
-    // than a rectangle growing.
-    final edge = e < 0.5 ? right : left;
-    canvas.drawRect(
-      Rect.fromLTRB(edge - 2, 0, edge + 2, size.height),
-      Paint()..color = SLColors.ink.withValues(alpha: 0.85),
+      Rect.fromLTWH(0, 0, size.width * draw, 3),
+      Paint()..color = color.withValues(alpha: fade),
     );
   }
 
   @override
-  bool shouldRepaint(_SweepPainter old) => old.t != t || old.color != color;
+  bool shouldRepaint(_RulePainter old) => old.t != t || old.color != color;
 }

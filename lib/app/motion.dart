@@ -207,3 +207,62 @@ class _FadeSlideInState extends State<FadeSlideIn>
     );
   }
 }
+
+/// Builds [builder] with `false` until the widget's top edge scrolls into the
+/// viewport, then `true` for good — the trigger for animations that should
+/// play when you reach them (a grid lighting up, a ladder filling), not on a
+/// page you have not scrolled to yet. Shows immediately under reduced motion
+/// or when there is nothing to scroll.
+class WhenVisible extends StatefulWidget {
+  final Widget Function(BuildContext context, bool visible) builder;
+  const WhenVisible({super.key, required this.builder});
+
+  @override
+  State<WhenVisible> createState() => _WhenVisibleState();
+}
+
+class _WhenVisibleState extends State<WhenVisible> {
+  ScrollNotificationObserverState? _observer;
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _check());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+      _visible = true;
+      return;
+    }
+    _observer?.removeListener(_onScroll);
+    _observer = ScrollNotificationObserver.maybeOf(context);
+    _observer?.addListener(_onScroll);
+  }
+
+  void _onScroll(ScrollNotification _) => _check();
+
+  void _check() {
+    if (_visible || !mounted) return;
+    final box = context.findRenderObject() as RenderBox?;
+    if (_observer != null && box != null && box.hasSize) {
+      final top = box.localToGlobal(Offset.zero).dy;
+      if (top > MediaQuery.of(context).size.height * 0.9) return;
+    }
+    _observer?.removeListener(_onScroll);
+    _observer = null;
+    setState(() => _visible = true);
+  }
+
+  @override
+  void dispose() {
+    _observer?.removeListener(_onScroll);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _visible);
+}

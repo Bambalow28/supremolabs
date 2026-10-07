@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../app/app_icon.dart';
 import '../app/motion.dart';
 import '../app/site_shell.dart';
 import '../data/products.dart';
@@ -23,8 +24,10 @@ Color sleeveInk(Color c) {
       : const Color(0xFFF7F7F5);
 }
 
-const _dig = Duration(milliseconds: 460);
-const _digCurve = Curves.easeOutQuart;
+const _dig = Duration(milliseconds: 760);
+
+/// Expo-out: a drawer thrown open, settling gently rather than stopping dead.
+const _digCurve = Cubic(0.16, 1, 0.3, 1);
 
 void _open(BuildContext context, Product p) {
   if (p.live) context.push(p.route!);
@@ -192,14 +195,33 @@ class _CrateState extends State<_Crate> {
               else
                 shelf,
               const SizedBox(height: 28),
-              AnimatedSwitcher(
-                duration: reduce
-                    ? Duration.zero
-                    : const Duration(milliseconds: 280),
-                child: _Notes(
-                  key: ValueKey(_selected),
-                  product: products[_selected],
-                  narrow: narrow,
+              AnimatedSize(
+                duration: reduce ? Duration.zero : _dig,
+                curve: _digCurve,
+                alignment: Alignment.topLeft,
+                child: AnimatedSwitcher(
+                  duration: reduce ? Duration.zero : _dig,
+                  switchInCurve: _digCurve,
+                  switchOutCurve: Curves.easeIn,
+                  layoutBuilder: (current, previous) => Stack(
+                    alignment: Alignment.topLeft,
+                    children: [...previous, ?current],
+                  ),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween(
+                        begin: const Offset(0, 0.18),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: _Notes(
+                    key: ValueKey(_selected),
+                    product: products[_selected],
+                    narrow: narrow,
+                  ),
                 ),
               ),
             ],
@@ -238,28 +260,66 @@ class _ShelfItem extends StatelessWidget {
       child: Hover(
         onTap: onTap,
         // The lift runs on its own quick timer, separate from the slower
-        // dig that opens/closes the sleeve — a spine should feel responsive
-        // to the cursor moving between items, not follow the same 460ms
-        // the crate takes to dig one open.
+        // slide that opens/closes the sleeve — a spine should feel
+        // responsive to the cursor moving between items.
         builder: (context, hovered) => AnimatedSlide(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
           offset: hovered && !open ? Offset(0, -12 / sleeve) : Offset.zero,
-          child: AnimatedContainer(
+          // One progress value drives width, the spine fading out and the
+          // sleeve sliding into view, so the sleeve is drawn out of the crate
+          // in a single gesture instead of swapping at the first frame. A
+          // tween that retargets mid-flight reverses from where it is.
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(end: open ? 1.0 : 0.0),
             duration: duration,
             curve: _digCurve,
-            width: open ? sleeve : spine,
-            height: sleeve,
-            child: ClipRect(
-              child: OverflowBox(
-                alignment: Alignment.centerLeft,
-                minWidth: open ? sleeve : spine,
-                maxWidth: open ? sleeve : spine,
-                child: open
-                    ? _Sleeve(product: product, size: sleeve, lifted: hovered)
-                    : _Spine(product: product, width: spine, lit: hovered),
-              ),
-            ),
+            builder: (context, t, _) {
+              final tt = t.clamp(0.0, 1.0);
+              return SizedBox(
+                width: spine + (sleeve - spine) * t,
+                height: sleeve,
+                child: ClipRect(
+                  child: Stack(
+                    children: [
+                      if (tt > 0)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          width: sleeve,
+                          height: sleeve,
+                          child: Opacity(
+                            opacity: Curves.easeOut.transform(
+                              ((tt - 0.12) / 0.6).clamp(0.0, 1.0),
+                            ),
+                            child: _Sleeve(
+                              product: product,
+                              size: sleeve,
+                              lifted: hovered,
+                              reveal: tt,
+                            ),
+                          ),
+                        ),
+                      if (tt < 1)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          width: spine,
+                          height: sleeve,
+                          child: Opacity(
+                            opacity: (1 - tt * 3).clamp(0.0, 1.0),
+                            child: _Spine(
+                              product: product,
+                              width: spine,
+                              lit: hovered,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -311,17 +371,20 @@ class _Spine extends StatelessWidget {
   }
 }
 
-/// A release's cover. Shipped: flooded in the product's own color, its real
-/// screen rising out of the bottom edge when one exists, the name set big
-/// when one does not. Forthcoming: a blank keyline sleeve, stamped.
+/// A release's cover. Shipped: flooded in the product's own color, its app
+/// icon resting bottom right. Forthcoming: a blank keyline sleeve, stamped.
 class _Sleeve extends StatelessWidget {
   final Product product;
   final double size;
   final bool lifted;
+
+  /// 0–1 as the sleeve is drawn out; the icon trails the sleeve's edge.
+  final double reveal;
   const _Sleeve({
     required this.product,
     required this.size,
     required this.lifted,
+    this.reveal = 1,
   });
 
   @override
@@ -331,7 +394,6 @@ class _Sleeve extends StatelessWidget {
     final bg = live ? (product.accent ?? SLColors.inkMuted) : SLColors.surface;
     final ink = live ? sleeveInk(bg) : SLColors.inkMuted;
     final pad = s * 0.055;
-    final screen = product.screen;
 
     return Container(
       width: s,
@@ -343,48 +405,22 @@ class _Sleeve extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
-          if (screen != null)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 320),
-              curve: _digCurve,
-              top: s * (lifted ? 0.26 : 0.31),
-              right: s * 0.08,
-              width: s * 0.42,
-              // Same device-frame treatment as the product page's own screen
-              // rail — a rounded card with a hairline and a drop shadow,
-              // rather than a bare rectangle of pixels.
-              child: Container(
-                padding: EdgeInsets.all(s * 0.008),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(s * 0.045),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.16),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.45),
-                      blurRadius: s * 0.045,
-                      offset: Offset(0, s * 0.02),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(s * 0.035),
-                  child: Image.asset(screen, fit: BoxFit.fitWidth),
-                ),
-              ),
-            )
-          else if (live)
+          if (live)
             Positioned(
-              left: -s * 0.02,
-              bottom: -s * 0.1,
-              child: Text(
-                product.name.toUpperCase(),
-                softWrap: false,
-                style: SLType.display(
-                  s * 0.46,
-                  weight: FontWeight.w900,
-                ).copyWith(color: Color.lerp(bg, ink, 0.16), height: 1),
+              right: pad * 1.4,
+              bottom: pad * 1.4,
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 320),
+                curve: _digCurve,
+                scale: lifted ? 1.05 : 1,
+                child: Transform.translate(
+                  offset: Offset(s * 0.22 * (1 - reveal), 0),
+                  child: AppIcon(
+                    product: product,
+                    size: s * 0.38,
+                    shadow: true,
+                  ),
+                ),
               ),
             )
           else
@@ -427,7 +463,7 @@ class _Sleeve extends StatelessWidget {
           Positioned(
             left: pad,
             top: pad + s * 0.07,
-            width: screen != null ? s * 0.4 : s - pad * 2,
+            width: s - pad * 2,
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
@@ -594,16 +630,15 @@ class _Track extends StatelessWidget {
                     style: SLType.label(SLColors.inkMuted),
                   ),
                 ),
-              // The sleeve, at thumbnail scale: solid when out, a keyline
-              // when forthcoming.
-              Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: live ? product.accent : null,
-                  border: live
-                      ? null
-                      : Border.all(color: SLColors.inkMuted, width: 1.4),
+              // The release's icon, as it sits on the home screen; dimmed
+              // while forthcoming.
+              AnimatedScale(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                scale: hovered ? 1.08 : 1,
+                child: Opacity(
+                  opacity: live ? 1 : 0.5,
+                  child: AppIcon(product: product, size: narrow ? 44 : 52),
                 ),
               ),
               const SizedBox(width: 18),

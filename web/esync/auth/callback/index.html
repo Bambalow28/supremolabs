@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Connecting Tesla</title>
+<style>:root{color-scheme:dark}body{margin:0;background:#05080b;color:#e9f1f5;font:17px/1.5 -apple-system,system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;text-align:center;padding:20px}a{color:#2ee6ff}</style>
+</head><body><p id="m">Connecting your Tesla…</p>
+<script>
+// Tesla sends the one-time code here; hand it to the app, which exchanges it server-side.
+var q = location.search;
+document.getElementById('m').innerHTML =
+  new URLSearchParams(q).get('code')
+    ? 'Returning to ESYNC… <br><a href="esync://tesla' + q.replace(/[<>"]/g, '') + '">Tap here if nothing happens</a>'
+    : 'Tesla did not approve the connection. You can close this and try again.';
+if (new URLSearchParams(q).get('code') || new URLSearchParams(q).get('error')) location.replace('esync://tesla' + q);
+</script></body></html>

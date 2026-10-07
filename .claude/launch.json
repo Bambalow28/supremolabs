@@ -1,0 +1,40 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "supremolabs-web",
+      "runtimeExecutable": "/Users/supremo/Documents/FlutterVersions/flutter/bin/flutter",
+      "runtimeArgs": [
+        "run",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5599",
+        "--web-hostname",
+        "127.0.0.1"
+      ],
+      "port": 5599
+    },
+    {
+      "name": "supremolabs-static",
+      "runtimeExecutable": "/usr/bin/python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5600",
+        "-d",
+        "build/web"
+      ],
+      "port": 5600
+    },
+    {
+      "name": "supremolabs-spa",
+      "runtimeExecutable": "/usr/bin/python3",
+      "runtimeArgs": [
+        "-c",
+        "import http.server,os\nos.chdir(\"build/web\")\nclass H(http.server.SimpleHTTPRequestHandler):\n    def do_GET(self):\n        if not os.path.exists(self.path.split(\"?\")[0].lstrip(\"/\")) : self.path=\"/index.html\"\n        return super().do_GET()\nhttp.server.ThreadingHTTPServer((\"127.0.0.1\",5601),H).serve_forever()"
+      ],
+      "port": 5601
+    }
+  ]
+}

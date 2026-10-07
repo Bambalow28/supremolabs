@@ -748,7 +748,7 @@ class _TxRow extends StatelessWidget {
         ? iconFor(category.icon)
         : tx.paydayId != null
         ? Icons.volunteer_activism_rounded
-        : Icons.attach_money_rounded;
+        : null;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -768,7 +768,23 @@ class _TxRow extends StatelessWidget {
                     color: swatch.color,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 22, color: onSwatchIcon),
+                  child: Center(
+                    child: icon != null
+                        ? Icon(icon, size: 22, color: onSwatchIcon)
+                        : Text(
+                            r'$',
+                            textHeightBehavior: const TextHeightBehavior(
+                              applyHeightToFirstAscent: false,
+                              applyHeightToLastDescent: false,
+                            ),
+                            style: TextStyle(
+                              fontSize: 23,
+                              height: 1,
+                              fontWeight: FontWeight.w700,
+                              color: onSwatchIcon,
+                            ),
+                          ),
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(

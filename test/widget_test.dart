@@ -53,13 +53,13 @@ void main() {
     expect(pages.containsKey('/nope'), isFalse);
   });
 
-  test('routes sweep in the destination line colour, not a Material cut', () {
+  test('routes rise in over the destination line colour, not a Material cut', () {
     final page = LineSweepPage(
       path: '/travelsync',
       builder: pages['/travelsync']!,
       line: SLColors.accent,
     );
     expect(page, isNot(isA<MaterialPage<dynamic>>()));
-    expect(page.transitionDuration, const Duration(milliseconds: 620));
+    expect(page.transitionDuration, const Duration(milliseconds: 760));
   });
 }
