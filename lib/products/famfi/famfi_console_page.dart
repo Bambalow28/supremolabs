@@ -100,7 +100,7 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
     // Skeleton until the household's first full snapshot lands — local
     // prefs may be empty or another household's stale copy.
     store.setLoading(true);
-    _sync = HouseholdSync(store, hid)..fromWeb = true;
+    _sync = HouseholdSync(store, hid, _user!.uid)..fromWeb = true;
     await _sync!.start(importLocal: false);
     // ponytail: a failed first snapshot only debugPrints in HouseholdSync, so
     // fall back to local data after 10s rather than skeleton forever; surface
@@ -119,7 +119,7 @@ class _FamFiConsolePageState extends State<FamFiConsolePage> {
       final hid = _hid;
       if (hid == null) return;
       _sync?.stop();
-      _sync = HouseholdSync(store, hid)..fromWeb = true;
+      _sync = HouseholdSync(store, hid, _user!.uid)..fromWeb = true;
       await _sync!.start(importLocal: false);
     } finally {
       _refreshing = null;
