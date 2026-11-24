@@ -6,12 +6,13 @@ import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
 import 'package:juwa_wealth/ui/transactions/transactions_screen.dart'
     show dayLabel, newestFirst;
+import 'package:juwa_wealth/ui/sides.dart' show whoLabel, whoStamp;
 import 'package:juwa_wealth/widgets.dart';
 
 import '../ff_theme.dart';
 import 'csv_download.dart';
 import 'csv_export.dart';
-import 'drawer.dart' show categoryLabel, openTransactionDetail;
+import 'drawer.dart' show categoryLabel, openTransactionDetail, pickFrom;
 
 class LedgerPanel extends StatefulWidget {
   final JuwaStore store;
@@ -246,6 +247,7 @@ class _LedgerPanelState extends State<LedgerPanel> {
             ],
           ),
           const SizedBox(height: 16),
+          _MissedBills(store: widget.store),
           const SizedBox(height: 14),
           if (filtered.isEmpty)
             Container(
@@ -733,17 +735,27 @@ class _TxRow extends StatelessWidget {
         .firstOrNull;
     final bill = tx.billId == null
         ? null
-        : store.bills.where((b) => b.id == tx.billId).firstOrNull;
-    final category = bill != null || tx.categoryId == null
+        : store.allBills.where((b) => b.id == tx.billId).firstOrNull;
+    final budget = bill != null || tx.categoryId == null
+        ? null
+        : store.budgets.where((b) => b.id == tx.categoryId).firstOrNull;
+    final category = bill != null || budget != null || tx.categoryId == null
         ? null
         : store.categories.where((cc) => cc.id == tx.categoryId).firstOrNull;
-    // The app's own prefix: the bill's, else the category's, else the
-    // account's colour, with a payday / dollar glyph when neither has one.
+    // The app's own prefix: the bill's, else the budget's, else the
+    // category's, else the account's colour, with a payday / dollar glyph
+    // when none has one.
     final swatch = swatchFor(
-      bill?.color ?? category?.color ?? account?.color ?? 'graphite',
+      bill?.color ??
+          budget?.color ??
+          category?.color ??
+          account?.color ??
+          'graphite',
     );
     final icon = bill != null
         ? iconFor(bill.icon)
+        : budget != null
+        ? iconFor(budget.icon)
         : category != null
         ? iconFor(category.icon)
         : tx.paydayId != null
@@ -847,7 +859,14 @@ class _TxRow extends StatelessWidget {
                 ),
                 SizedBox(
                   width: 72,
-                  child: Center(child: FFStamp(tx.by.label, color: c.muted)),
+                  child: Center(
+                    child: store.debtMode && Owner.second != null
+                        ? Tooltip(
+                            message: whoLabel(store, tx),
+                            child: FFStamp(whoStamp(store, tx), color: c.muted),
+                          )
+                        : FFStamp(tx.by.label, color: c.muted),
+                  ),
                 ),
                 SizedBox(
                   width: 100,
@@ -903,6 +922,107 @@ class _ToolButton extends StatelessWidget {
             Text(label),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Past-due bills with no payment recorded: an orange card above the ledger
+/// (red once any is over a week late). Picking a row asks for the missing
+/// account and writes the transaction.
+class _MissedBills extends StatelessWidget {
+  final JuwaStore store;
+  const _MissedBills({required this.store});
+
+  Future<void> _pay(BuildContext context, Bill bill, DateTime date) async {
+    var accountId = bill.accountId;
+    if (accountId == null) {
+      accountId = await pickFrom<String>(
+        context,
+        title: '${bill.name}: pay from which account?',
+        items: [for (final a in store.accounts) (a.name, a.id)],
+      );
+      if (accountId == null) return;
+    }
+    await store.markBillPaid(bill, date, accountId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final missed = store.missedBills(now);
+    if (missed.isEmpty) return const SizedBox.shrink();
+    final c = context.c;
+    final tone = missed.any((m) => now.difference(m.$2).inDays > 7)
+        ? c.bad
+        : c.warn;
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
+      decoration: BoxDecoration(
+        color: tone.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: tone.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline_rounded, size: 18, color: tone),
+              const SizedBox(width: 8),
+              Text(
+                missed.length == 1
+                    ? '1 bill needs details'
+                    : '${missed.length} bills need details',
+                style: ff(14.5, weight: FontWeight.w700, color: c.ink),
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  'Past due with no payment recorded.',
+                  overflow: TextOverflow.ellipsis,
+                  style: ff(12.5, color: c.muted),
+                ),
+              ),
+              const Spacer(),
+              // Hides them; no transaction is written.
+              TextButton(
+                onPressed: () => store.dismissMissed(missed),
+                child: Text('Clear all', style: ff(13, color: c.bad)),
+              ),
+            ],
+          ),
+          for (final (bill, date) in missed)
+            InkWell(
+              onTap: () => _pay(context, bill, date),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${bill.name} · ${ffDate(date)}',
+                        style: ff(14, color: c.ink),
+                      ),
+                    ),
+                    Text(
+                      ffAmount(bill.amount),
+                      style: ff(14, weight: FontWeight.w700, color: c.ink),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right_rounded, size: 18, color: c.muted),
+                    IconButton(
+                      tooltip: 'Dismiss',
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.close_rounded, size: 16, color: c.muted),
+                      onPressed: () => store.dismissMissed([(bill, date)]),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

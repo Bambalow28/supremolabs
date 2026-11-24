@@ -77,8 +77,15 @@ const _rows = <_Row>[
   _Row(
     Icons.pie_chart_rounded,
     'Budget',
-    'Monthly targets, manual spent.',
+    'Monthly targets, spend counted from your transactions.',
     'All categories in one table, plus a "can we afford it?" check.',
+  ),
+  _Row(
+    Icons.flag_rounded,
+    'Plan',
+    'Name a goal like "Wedding", list what it will cost, and tick off what '
+        'is paid.',
+    'Phone only for now.',
   ),
 ];
 
@@ -674,9 +681,7 @@ class _Keeps extends StatelessWidget {
               : const Row(
                   children: [
                     SizedBox(width: 44),
-                    Expanded(
-                      child: _HeadLabel('ON THE DESK · /famfi/personal'),
-                    ),
+                    Expanded(child: _HeadLabel('IN THE APP')),
                   ],
                 ),
         ),
@@ -750,7 +755,28 @@ class _KeepsRow extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [title, const SizedBox(height: 10), desk],
+                    children: [
+                      title,
+                      const SizedBox(height: 10),
+                      phone,
+                      const SizedBox(height: 8),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'On the desk · ',
+                              style: ff(
+                                15,
+                                weight: FontWeight.w600,
+                                color: const Color(0xFF8E96A3),
+                              ),
+                            ),
+                            TextSpan(text: row.desk),
+                          ],
+                        ),
+                        style: ff(15, height: 1.5, color: Colors.white),
+                      ),
+                    ],
                   ),
                 ),
               ],

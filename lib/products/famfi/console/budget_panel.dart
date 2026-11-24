@@ -274,9 +274,11 @@ class _BudgetRow extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.donut_small_rounded,
+                  iconFor(budget.icon),
                   size: 17,
-                  color: c.muted,
+                  color: budget.color == null
+                      ? c.ink
+                      : swatchFor(budget.color!).color,
                 ),
               ),
               const SizedBox(width: 14),
@@ -298,7 +300,12 @@ class _BudgetRow extends StatelessWidget {
                     child: BudgetBar(
                       spent: spent,
                       target: budget.monthlyTarget,
-                      color: c.tint,
+                      color: budgetTone(
+                        c,
+                        budget.color,
+                        spent,
+                        budget.monthlyTarget,
+                      ),
                     ),
                   ),
                 ),

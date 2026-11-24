@@ -99,8 +99,7 @@ String ffMoney(double v) {
   return v < 0 ? '−$s' : s;
 }
 
-/// `$12.30` for any [v] — direction is carried by [moneyColor] (green in
-/// hand, red owed, grey at zero), never by a +/− sign, as in the app.
+/// `$12.30` for any [v] — transaction direction is carried by colour, not sign.
 String ffAmount(double v) => _money.format(v.abs());
 
 /// The JOSH / JUDY / JOINT (or HIS / HERS) stamp, as on the app's cards.
@@ -271,4 +270,17 @@ class FFCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The app's budget progress colour: bad when over, warn past 85%, else the
+/// budget's own swatch (the theme tint when it has none).
+Color budgetTone(JuwaColors c, String? swatchKey, double spent, double target) {
+  final share = target > 0 ? spent / target : 0.0;
+  return spent > target && target > 0
+      ? c.bad
+      : share > 0.85
+      ? c.warn
+      : swatchKey == null
+      ? c.tint
+      : swatchFor(swatchKey).color;
 }

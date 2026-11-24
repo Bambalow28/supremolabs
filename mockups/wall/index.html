@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Supremo Labs — The Wall (mockups)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Hanken+Grotesk:wght@400;600;700&family=Silkscreen&display=swap" rel="stylesheet">
+<style>
+:root{--ground:#0B0D10;--surface:#13161B;--hair:#262B33;--ink:#F2F4F7;--mute:#8B93A1;--amber:#FFB020;--brass:#B8862E;--brass-d:#5C3F12}
+*{box-sizing:border-box;margin:0}
+body{overflow-x:hidden;background:var(--ground);color:var(--ink);font:400 16px/1.5 "Hanken Grotesk",system-ui,sans-serif}
+a{color:inherit;text-decoration:none}
+.measure{max-width:1120px;margin:0 auto;padding:0 24px}
+
+/* mock controls — not part of the design */
+.ctl{position:sticky;top:0;z-index:50;background:#000;border-bottom:1px solid var(--hair);padding:10px 24px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font:600 12px "Hanken Grotesk";letter-spacing:.14em;text-transform:uppercase}
+.ctl span{color:var(--mute);margin-right:4px}
+.ctl button{font:inherit;letter-spacing:inherit;text-transform:inherit;background:none;color:var(--mute);border:1px solid var(--hair);padding:8px 14px;cursor:pointer}
+.ctl button[aria-pressed=true]{color:var(--ground);background:var(--amber);border-color:var(--amber)}
+
+nav{display:flex;justify-content:space-between;padding:22px 0 0;font:600 12px "Hanken Grotesk";letter-spacing:.2em}
+nav b{font-weight:600}nav a{color:var(--amber)}
+.mast{padding:28px 0 8px}
+.mast h1{font:800 200px/.86 "Big Shoulders Display";white-space:nowrap;display:inline-block;transform-origin:0 0;letter-spacing:0}
+.count{font:600 12px "Hanken Grotesk";letter-spacing:.2em;color:var(--mute);text-transform:uppercase;margin:6px 0 28px}
+
+/* crate (kept, compact) */
+.crate{display:flex;align-items:flex-end;gap:2px;height:150px;border-bottom:1px solid var(--hair)}
+.spine{flex:1;height:100%;position:relative;overflow:hidden}
+.spine.kf{background:var(--surface);outline:1px solid var(--hair);outline-offset:-1px}
+.spine i{position:absolute;left:50%;top:14px;transform:rotate(90deg) translateY(50%);transform-origin:0 0;font:700 15px "Big Shoulders Display";letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;font-style:normal}
+.spine.big{flex:5}
+.sleeveNote{padding:18px 0 56px;display:flex;justify-content:space-between;gap:24px;align-items:center;border-bottom:1px solid var(--hair)}
+.sleeveNote h2{font:700 40px/1 "Big Shoulders Display"}.sleeveNote p{color:var(--mute)}
+
+/* THE WALL ------------------------------------------------ */
+h2.wallh{font:700 64px/1 "Big Shoulders Display";padding:80px 0 12px}
+.wallsub{color:var(--mute);max-width:520px;margin-bottom:36px}
+
+.room{position:relative;overflow:hidden;background:#12151b;
+  background-image:radial-gradient(#181c23 1.2px,transparent 1.3px),radial-gradient(#0f1217 1.2px,transparent 1.3px);
+  background-size:8px 8px;background-position:0 0,4px 4px;border-top:1px solid #000}
+.room::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;
+  background:radial-gradient(circle 230px at var(--mx,50%) var(--my,30%),transparent 0,rgba(4,5,7,.55) 55%,rgba(4,5,7,.96) 100%)}
+body.dark .room::after{opacity:1}
+.room>.rail,.room>.base{column-span:none}.rail{position:absolute;left:0;right:0;height:6px;background:#2a2118;box-shadow:0 2px 0 #0b0806,0 -2px 0 #3b2e20}
+.base{position:absolute;left:0;right:0;bottom:0;height:70px;background:
+  repeating-linear-gradient(90deg,#0d0f13 0 4px,#0b0c10 4px 8px);border-top:6px solid #2a2118;box-shadow:0 -2px 0 #3b2e20}
+
+.piece{display:block;position:absolute;text-align:center}
+.frame{position:relative;padding:8px;background:#17120d;
+  box-shadow:0 0 0 3px var(--brass),0 0 0 6px var(--brass-d),8px 8px 0 6px rgba(0,0,0,.45);
+  transition:transform .28s cubic-bezier(.16,1,.3,1)}
+.frame.kf{background:transparent;box-shadow:none;border:2px dashed #3a414c}
+.mat{background:#e6dfcd;padding:7px}
+.frame.kf .mat{background:transparent;padding:7px}
+canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+/* picture light */
+.lamp{position:absolute;left:50%;top:-24px;width:44px;height:6px;margin-left:-22px;background:var(--brass);box-shadow:0 -4px 0 -1px var(--brass-d),0 2px 0 #000}
+.lamp::after{content:"";position:absolute;left:-90px;right:-90px;top:6px;height:140px;pointer-events:none;
+  background:radial-gradient(ellipse 50% 100% at 50% 0,rgba(255,206,120,.20),transparent 72%);transition:opacity .3s;opacity:.7}
+.piece:hover .lamp::after,.piece:focus-visible .lamp::after{opacity:1}
+.piece:hover .frame{transform:translateY(-4px)}
+.piece:focus-visible{outline:2px solid var(--amber);outline-offset:14px}
+.plaque{display:inline-block;margin-top:20px;background:#d8cba7;color:#1b140a;padding:6px 12px 7px;text-align:left;min-width:120px;box-shadow:0 0 0 2px #7a5b22,3px 3px 0 2px rgba(0,0,0,.5)}
+.plaque .no{font:400 12px "Silkscreen",monospace;letter-spacing:.08em;display:block;opacity:.75}
+.plaque b{font:800 18px/1 "Big Shoulders Display";letter-spacing:.04em;text-transform:uppercase;display:block;margin-top:1px}
+.plaque em{font:600 12px "Hanken Grotesk";letter-spacing:.14em;text-transform:uppercase;font-style:normal;display:block;margin-top:2px}
+.plaque.kf{background:transparent;color:var(--mute);box-shadow:none;border:1px solid var(--hair)}
+
+/* variant A: salon hang (absolute stage) */
+#A{columns:4;column-gap:44px;padding:90px 48px 130px}
+#A .piece{position:relative;break-inside:avoid;margin-bottom:76px}
+#A .piece:nth-of-type(3n+1){margin-top:30px}#A .piece:nth-of-type(4n+3){margin-top:56px}
+/* variant B: long gallery (flex rows on a shared eye line) */
+#B{padding:70px 40px 130px;display:flex;flex-wrap:wrap;justify-content:center;gap:56px 52px;align-items:flex-start}
+#B .piece{position:relative}
+#B .frame canvas{height:230px;width:auto}
+#B .rail{top:0}
+body:not(.mA) #A,body.mA #B{display:none}
+
+.notes{padding:96px 0 120px;display:flex;gap:40px;align-items:flex-start}
+.portrait{width:240px;height:240px;border:1px solid var(--hair);display:grid;place-items:center;color:var(--mute);font:600 11px "Hanken Grotesk";letter-spacing:.18em;text-align:center}
+.notes p{font-size:22px;line-height:1.45;max-width:600px}
+.notes a{display:inline-block;margin-top:22px;border:1px solid var(--amber);color:var(--amber);padding:15px 22px;font:600 12px "Hanken Grotesk";letter-spacing:.22em}
+
+@media(max-width:760px){
+  .mast h1{font-size:90px}h2.wallh{font-size:44px}
+  #A{columns:2;column-gap:22px;padding:60px 18px 120px}
+  #B{padding:60px 18px 120px;gap:44px 20px}#B .frame canvas{height:150px}
+  .notes{flex-direction:column}.sleeveNote{flex-direction:column;align-items:flex-start}
+  .crate{height:110px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body class="mA">
+<div class="ctl"><span>Mockup</span>
+  <button data-v="A" aria-pressed="true">A · Salon hang</button>
+  <button data-v="B" aria-pressed="false">B · Long gallery</button>
+  <button id="lights" aria-pressed="false">Lights off (torch)</button>
+</div>
+
+<div class="measure">
+  <nav><b>SUPREMO LABS</b><a href="#">ABOUT</a></nav>
+  <div class="mast"><h1 id="mast">SUPREMO LABS</h1></div>
+  <p class="count">11 out now · 2 forthcoming</p>
+  <div class="crate" id="crate"></div>
+  <div class="sleeveNote"><div><h2>Vestiary</h2><p>Your closet, laid out.</p></div><a href="#" style="color:var(--amber);border:1px solid var(--amber);padding:15px 22px;font:600 12px 'Hanken Grotesk';letter-spacing:.22em">OPEN VESTIARY →</a></div>
+  <h2 class="wallh">The Wall</h2>
+  <p class="wallsub">Every release, framed and hung. Step up to a painting to open the app.</p>
+</div>
+
+<div class="measure" style="max-width:1168px">
+  <div class="room" id="A"><div class="rail" style="top:0"></div><div class="base"></div></div>
+  <div class="room" id="B"><div class="rail"></div><div class="base"></div></div>
+</div>
+
+<div class="measure notes">
+  <div class="portrait">PORTRAIT /<br>TO BE SUPPLIED</div>
+  <div><p>Supremo Labs is one person building a connected set of everyday tools. Each frame above is a real app.</p><a href="#">ABOUT SUPREMO LABS</a></div>
+</div>
+
+<script>
+/* ---- tiny pixel canvas ---- */
+const BY=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+function mk(w,h){
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+  const g={c,w,h,
+    p(a,b,col){x.fillStyle=col;x.fillRect(Math.round(a),Math.round(b),1,1)},
+    r(a,b,ww,hh,col){x.fillStyle=col;x.fillRect(Math.round(a),Math.round(b),ww,hh)},
+    l(x0,y0,x1,y1,col){x0=Math.round(x0);y0=Math.round(y0);x1=Math.round(x1);y1=Math.round(y1);
+      const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;
+      for(;;){g.p(x0,y0,col);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}},
+    d(cx,cy,rad,col){for(let j=-rad;j<=rad;j++)for(let i=-rad;i<=rad;i++)if(i*i+j*j<=rad*rad+rad)g.p(cx+i,cy+j,col)},
+    grad(c1,c2,y0=0,y1=h){for(let j=0;j<h;j++)for(let i=0;i<w;i++){const t=(j-y0)/(y1-y0);g.p(i,j,t>(BY[j&3][i&3]+.5)/16?c2:c1)}},
+    tri(cx,base,hh,col){for(let i=0;i<hh;i++)g.r(cx-i,base-hh+i,i*2+1,1,col)},
+    poly(pts,col,w=1){for(let i=0;i<pts.length-1;i++){for(let k=0;k<w;k++)g.l(pts[i][0],pts[i][1]+k,pts[i+1][0],pts[i+1][1]+k,col)}}
+  };return g}
+
+/* ---- the paintings: one scene per app, in its own palette ---- */
+const S={
+workit(g){g.grad('#0b0c0e','#17375c');g.r(0,28,48,8,'#0b0c0e');g.r(0,28,48,1,'#4A9DFF');
+  g.r(5,18,38,2,'#c9d3df');
+  for(const [a,b] of [[7,1],[40,-1]]){g.r(a-(b>0?0:2),9,3,20,'#4A9DFF');g.r(a+(b>0?3:-4),12,2,14,'#2b6fc0');g.r(a+(b>0?5:-6),15,1,8,'#c9d3df')}
+  g.r(10,29,28,1,'#17375c');for(let i=0;i<4;i++)g.r(33+i*3,4,1,6,'#4A9DFF');g.l(32,9,43,5,'#4A9DFF')},
+travelsync(g){g.grad('#4B76FA','#c6d6ff');g.d(37,9,4,'#fff3c4');
+  g.tri(10,28,13,'#27408f');g.tri(22,28,18,'#1c2f6e');g.tri(36,28,11,'#27408f');g.r(0,27,48,9,'#0B0F1A');
+  for(let t=0;t<=1;t+=.045){const x=4+t*38,y=26-Math.sin(t*Math.PI)*17;g.p(x,y,'#ffffff')}
+  g.r(20,6,6,1,'#fff');g.r(23,4,1,5,'#fff');g.r(21,7,2,1,'#fff');
+  g.d(43,25,2,'#ff5a4f');g.p(43,28,'#ff5a4f')},
+plansync(g){g.grad('#0A0E14','#0f3b38');g.r(7,12,22,30,'#2DD4BF');g.r(7,9,10,4,'#2DD4BF');
+  g.r(10,6,16,28,'#e8fbf8');for(let i=0;i<5;i++)g.r(12,10+i*5,12-(i%2)*4,1,'#2DD4BF');
+  g.r(7,22,22,20,'#1fa593');g.r(7,22,22,1,'#7ef0e0');g.d(24,31,2,'#0A0E14');g.p(24,31,'#2DD4BF')},
+notesync(g){g.grad('#000000','#0a1c38');g.r(7,7,22,36,'#f4f6fa');g.r(7,7,22,5,'#0A84FF');
+  for(let i=0;i<4;i++)g.r(11+i*5,5,1,4,'#cfe3ff');
+  for(let i=0;i<6;i++){g.r(10,16+i*4,i==5?8:16,1,'#c3cfe2')}g.r(10,15,3,3,'#0A84FF');
+  g.l(26,40,32,30,'#FFD35C');g.l(27,40,33,30,'#e0a92a');g.p(26,41,'#222')},
+diamo(g){g.grad('#211C4D','#44307a');g.r(4,5,28,2,'#FFD35C');
+  for(const x of [8,18,28])g.r(x,7,1,x==18?20:x==8?12:8,'#d9c58a');
+  g.d(8,22,4,'#FFD35C');g.d(10,21,3,'#2e2766');
+  g.r(16,27,5,1,'#FFD35C');g.r(18,25,1,5,'#FFD35C');g.r(17,26,3,3,'#FFD35C');
+  g.d(26,19,2,'#f5ecff');g.d(30,19,2,'#f5ecff');g.d(28,17,2,'#f5ecff');g.r(25,19,7,3,'#f5ecff');
+  for(let i=0;i<8;i++)g.p((i*13)%34+1,(i*17)%20+30,'#8e7cd0')},
+stanverse(g){g.grad('#0E0D10','#241f2a');g.r(4,12,32,16,'#F5F2EC');g.d(4,20,2,'#17141b');g.d(35,20,2,'#17141b');
+  for(let y=13;y<28;y+=2)g.p(26,y,'#9a948a');
+  ['...X...','...X...','XXXXXXX','.XXXXX.','..XXX..','.XX.XX.','.X...X.'].forEach((rw,j)=>[...rw].forEach((ch,i)=>ch=='X'&&g.p(9+i,16+j,'#0E0D10')));
+  g.r(29,16,5,1,'#0E0D10');g.r(29,19,4,1,'#0E0D10');g.r(29,22,5,1,'#0E0D10');
+  for(const [x,y] of [[6,6],[33,5],[20,34],[8,33],[31,35]])g.p(x,y,'#F5F2EC')},
+famfi(g){g.grad('#0C0E12','#16307a');g.d(15,20,10,'#2E5BE8');g.d(15,20,7,'#0C0E12');g.d(15,20,6,'#2E5BE8');
+  g.d(26,20,10,'#9db9ff');g.d(26,20,7,'#16307a');g.d(26,20,6,'#9db9ff');
+  g.r(13,16,4,8,'#0C0E12');g.r(24,16,4,8,'#16307a');g.r(5,33,30,2,'#2E5BE8');g.r(8,35,24,1,'#1a2d70')},
+esync(g){g.grad('#05080B','#0b3039');g.r(0,28,48,8,'#10171c');for(let x=2;x<48;x+=8)g.r(x,32,4,1,'#2EE6FF');
+  g.r(10,21,28,6,'#2EE6FF');g.r(15,16,17,5,'#2EE6FF');g.r(17,17,6,3,'#05080B');g.r(25,17,5,3,'#05080B');
+  g.d(16,27,3,'#05080B');g.d(33,27,3,'#05080B');g.d(16,27,1,'#c9f7ff');g.d(33,27,1,'#c9f7ff');
+  g.r(4,12,3,17,'#1b2a33');g.r(3,10,5,3,'#FFE14D');g.l(7,20,10,23,'#FFE14D');
+  g.poly([[40,3],[37,9],[40,9],[37,15]],'#FFE14D',2)},
+hoopsync(g){g.grad('#09090B','#2d1407');g.r(8,5,20,13,'#e9e9ec');
+  g.r(14,10,8,1,'#FF6A1F');g.r(14,16,8,1,'#FF6A1F');g.r(14,10,1,7,'#FF6A1F');g.r(21,10,1,7,'#FF6A1F');
+  g.r(12,18,12,2,'#FF6A1F');for(let i=0;i<6;i++)for(let x=13+(i>>1);x<23-(i>>1);x++)if((x+i)%2==0)g.p(x,20+i,'#f4f4f5');
+  g.d(18,37,5,'#FF6A1F');g.l(13,37,23,37,'#09090B');g.l(18,32,18,42,'#09090B');
+  for(let t=0;t<=1;t+=.07){g.p(8+t*10,34-Math.sin(t*Math.PI*.9)*14*t*1.2,'#FFC53D')}
+  g.r(0,44,36,4,'#3a1f0e')},
+hundredfold(g){g.fill?0:0;g.r(0,0,36,48,'#050806');
+  g.poly([[0,0],[12,14]],'#1f4a2a');g.poly([[36,0],[24,14]],'#1f4a2a');g.poly([[0,48],[12,34]],'#1f4a2a');g.poly([[36,48],[24,34]],'#1f4a2a');
+  g.r(12,14,12,20,'#0b1a10');g.r(15,19,6,15,'#FFB020');g.r(16,20,4,13,'#ffd36a');
+  for(let i=0;i<5;i++)g.l(3+i*2,46-i*2,15+i,35,'#0e2615');
+  g.r(5,28,2,2,'#ff2a2a');g.r(9,28,2,2,'#ff2a2a');g.r(27,31,2,2,'#ff2a2a');g.r(31,31,2,2,'#ff2a2a');
+  for(let i=0;i<4;i++)g.r(10+i*4,4,3,5,'#ff2a2a'),i==1&&g.r(10+4,4,3,5,'#050806')},
+vestiary(g){const bg='#0E1220';g.r(0,0,36,48,bg);
+  for(const [x,y,a,b] of [[3,3,1,1],[32,3,-1,1],[3,44,1,-1],[32,44,-1,-1]]){g.r(Math.min(x,x+a*6),y,7,1,'#6f9bff');g.r(x,Math.min(y,y+b*6),1,7,'#6f9bff')}
+  const row=(y,hw,c)=>g.r(18-hw,y,hw*2,1,c);
+  const W=y=>y<14?7:y<22?7-(y-14)*0.5:y<24?3:3+(y-24)*0.56;
+  for(let y=9;y<=40;y++)row(y,Math.round(W(y))+1,'#EDF0F6');
+  for(let y=10;y<=39;y++)row(y,Math.round(W(y)),'#FF7A45');
+  g.r(13,9,10,2,bg);g.r(14,11,8,1,bg);g.r(15,12,6,1,bg);g.r(8,9,1,3,bg);g.r(27,9,1,3,bg);
+  g.r(16,15,4,1,bg);g.p(16,14,bg);g.p(19,14,bg);
+  for(let x=7;x<30;x+=3)g.r(x,38,2,1,bg)},
+marketpulse(g){g.grad('#07101C','#0e2a47');
+  for(let x=0;x<48;x+=8)for(let y=0;y<36;y++)if(y%2==0)g.p(x,y,'#14304c');for(let y=6;y<36;y+=8)for(let x=0;x<48;x+=2)g.p(x,y,'#14304c');
+  const pts=[[2,24],[14,24],[18,16],[22,30],[27,6],[33,24],[46,24]];
+  g.poly(pts.map(p=>[p[0],p[1]+2]),'#14704a',2);g.poly(pts,'#2ED68B',2)},
+jarvis(g){g.grad('#13161B','#0d0f13');
+  g.poly([[6,6],[18,8],[30,6],[34,40],[4,42],[6,6]],'#1b1f26',1);
+  for(const [a,b,c,d] of [[10,8,9,36],[18,9,17,40],[26,8,27,38]])g.l(a,b,c,d,'#232832');
+  g.r(14,2,8,1,'#3a414c');g.p(18,3,'#3a414c')}
+};
+
+const APPS=[
+ ['WorkIt','Fitness','Body','workit','L',1],['TravelSync','Travel','Journeys','travelsync','L',1],['PlanSync','Planning','Journeys','plansync','P',1],
+ ['NoteSync','Notes','Everyday','notesync','P',1],['Diamo','Family','People','diamo','P',1],['Stanverse','Community','People','stanverse','S',1],
+ ['FamFi','Finance','Money','famfi','S',1],['ESYNC','Electric vehicles','Journeys','esync','L',1],['HoopSync','Sports','Body','hoopsync','P',1],
+ ['HundredFold','Game','Money','hundredfold','P',1],['Vestiary','Lifestyle','Everyday','vestiary','P',1],['MarketPulse','Markets','Money','marketpulse','L',1],
+ ['Jarvis','Productivity','Everyday','jarvis','P',0]];
+const ACC={workit:'#4A9DFF',travelsync:'#4B76FA',plansync:'#2DD4BF',notesync:'#0A84FF',diamo:'#FFD35C',stanverse:'#F5F2EC',famfi:'#2E5BE8',esync:'#2EE6FF',hoopsync:'#FF6A1F',hundredfold:'#FFB020',vestiary:'#FF7A45',marketpulse:'#2ED68B',jarvis:'#3a414c'};
+const DIM={L:[48,36],P:[36,48],S:[40,40]};
+
+/* salon hang: x, y (top of frame), painting width */
+const POS=[[24,70,300],[394,40,236],[700,90,170],[900,40,190],[60,430,210],[330,360,230],[640,350,260],[930,300,200],
+ [20,800,190],[280,760,300],[640,720,230],[920,700,230],[420,1160,200]];
+const sorted=APPS.map((a,i)=>({a,i}));
+
+function piece(a,i,variant){
+  const [name,cat,genre,key,o,live]=a,[w,h]=DIM[o];
+  const el=document.createElement('a');el.className='piece';el.href=live?'/'+key:'#';el.setAttribute('aria-label',live?'Open '+name:name+', forthcoming');
+  const fr=document.createElement('div');fr.className='frame'+(live?'':' kf');
+  const mat=document.createElement('div');mat.className='mat';
+  const g=mk(w,h);S[key](g);g.c.setAttribute('role','img');g.c.setAttribute('aria-label','Pixel painting for '+name);mat.appendChild(g.c);fr.appendChild(mat);
+  const no='SL '+String(i+1).padStart(3,'0');
+  const pl=document.createElement('div');pl.className='plaque'+(live?'':' kf');
+  pl.innerHTML=`<span class=no>${no}</span><b>${name}</b><em>${live?genre+' · out now':'Forthcoming'}</em>`;
+  if(live){const l=document.createElement('i');l.className='lamp';fr.appendChild(l)}
+  el.append(fr,pl);return el}
+
+const A=document.getElementById('A'),B=document.getElementById('B');
+APPS.forEach((a,i)=>{const e=piece(a,i);A.appendChild(e);B.appendChild(piece(a,i))});
+
+/* crate (unchanged idea, compact) */
+const crate=document.getElementById('crate');
+APPS.forEach((a,i)=>{const s=document.createElement('div');const live=a[5];s.className='spine'+(live?'':' kf')+(i==10?' big':'');
+  if(live){s.style.background=ACC[a[3]];s.style.color=['stanverse','diamo','esync','marketpulse','hoopsync','vestiary','plansync'].includes(a[3])?'#0B0D10':'#F7F7F5'}
+  else s.style.color='#8B93A1';
+  s.innerHTML=`<i>${a[0]}</i>`;crate.appendChild(s)});
+
+/* fitted masthead */
+function fit(){const h=document.getElementById('mast'),w=h.parentElement.clientWidth;h.style.transform='none';const k=w/h.scrollWidth;h.style.transform=`scale(${k})`;h.parentElement.style.height=(h.offsetHeight*k)+'px'}
+document.fonts.ready.then(fit);addEventListener('resize',fit);
+
+/* controls */
+const btns=[...document.querySelectorAll('[data-v]')];
+btns.forEach(b=>b.onclick=()=>{document.body.classList.toggle('mA',b.dataset.v==='A');btns.forEach(x=>x.setAttribute('aria-pressed',x===b))});
+const lb=document.getElementById('lights');lb.onclick=()=>{const on=document.body.classList.toggle('dark');lb.setAttribute('aria-pressed',on)};
+document.querySelectorAll('.room').forEach(r=>r.addEventListener('pointermove',e=>{const b=r.getBoundingClientRect();r.style.setProperty('--mx',e.clientX-b.left+'px');r.style.setProperty('--my',e.clientY-b.top+'px')}));
+</script>
+</body>
+</html>

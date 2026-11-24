@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../products/famfi/famfi_firebase_options.dart';
+import '../products/hoopsync/hoopsync_firebase_options.dart';
 import '../products/plansync/desk/plansync_firebase_options.dart';
 import '../products/workit/desk/workit_firebase_options.dart';
 import '../stanverse_firebase_options.dart';
@@ -39,6 +40,7 @@ Future<void> _init() async {
     app('stanverse', DefaultFirebaseOptions.currentPlatform),
     app('workit', workItFirebaseOptions),
     app('famfi', famFiFirebaseOptions),
+    app('hoopsync', hoopSyncFirebaseOptions),
     Supabase.initialize(
       // Read-only: the /travelsync in-page search reads travelsync's own
       // public tables with its own anon key — same project travelsync_website

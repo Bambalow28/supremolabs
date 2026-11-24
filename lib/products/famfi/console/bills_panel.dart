@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
+import 'package:juwa_wealth/ui/bills/cycle_card.dart';
 import 'package:juwa_wealth/ui/bills/bills_screen.dart' show freqLabel;
 import 'package:juwa_wealth/widgets.dart' show Reveal;
 
@@ -127,6 +128,11 @@ class _BillsPanelState extends State<BillsPanel> {
                     style: ff(14.5, color: c.muted),
                     children: [
                       TextSpan(
+                        text: ffMoney(beforeTotal),
+                        style: ff(14.5, weight: FontWeight.w700, color: c.ink),
+                      ),
+                      TextSpan(text: ' before ${ffDate(nextPayday)} · '),
+                      TextSpan(
                         text: ffMoney(store.monthlyBillTotal),
                         style: ff(14.5, weight: FontWeight.w700, color: c.ink),
                       ),
@@ -151,6 +157,11 @@ class _BillsPanelState extends State<BillsPanel> {
             ],
           ),
           const SizedBox(height: 20),
+          if (store.debtMode && Owner.second != null)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: CycleCard(store: store),
+            ),
           LayoutBuilder(
             builder: (context, cons) {
               final stacked = cons.maxWidth < 900;
@@ -316,7 +327,7 @@ class _Calendar extends StatelessWidget {
         date.day == today.day;
     final isPayday = paydayDates.contains(date);
     final occ = <(Bill, bool)>[];
-    for (final bill in store.bills) {
+    for (final bill in store.allBills) {
       if (JuwaStore.occurrences(
         bill,
         date,
@@ -382,8 +393,15 @@ class _Calendar extends StatelessWidget {
                   Container(
                     width: 14,
                     height: 14,
+                    // Personal bills read as a hollow ring.
                     decoration: BoxDecoration(
-                      color: swatchFor(bill.color).color,
+                      color: bill.personal ? null : swatchFor(bill.color).color,
+                      border: bill.personal
+                          ? Border.all(
+                              color: swatchFor(bill.color).color,
+                              width: 2,
+                            )
+                          : null,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -615,17 +633,29 @@ class _RowState extends State<_Row> {
                     ],
                   ),
                 ),
-                if (_hover && !paid)
+                if (_hover)
                   OutlinedButton.icon(
-                    onPressed: () =>
-                        widget.onMarkPaid(widget.bill, widget.date),
-                    icon: Icon(Icons.check_rounded, size: 15, color: c.good),
+                    onPressed: () => paid
+                        ? widget.store.unmarkBillPaid(widget.bill, widget.date)
+                        : widget.onMarkPaid(widget.bill, widget.date),
+                    icon: Icon(
+                      paid ? Icons.undo_rounded : Icons.check_rounded,
+                      size: 15,
+                      color: paid ? c.bad : c.good,
+                    ),
                     label: Text(
-                      'Mark paid',
-                      style: ff(12.5, weight: FontWeight.w700, color: c.good),
+                      paid ? 'Mark unpaid' : 'Mark paid',
+                      style: ff(
+                        12.5,
+                        weight: FontWeight.w700,
+                        color: paid ? c.bad : c.good,
+                      ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: c.good, width: 1.5),
+                      side: BorderSide(
+                        color: paid ? c.bad : c.good,
+                        width: 1.5,
+                      ),
                     ),
                   )
                 else

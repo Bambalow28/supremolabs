@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../about/about_page.dart';
+import 'app_legal_pages.dart';
 import 'backends.dart';
 import '../data/products.dart';
 import '../home/home_page.dart';
@@ -9,12 +10,18 @@ import '../products/diamo/diamo_page.dart';
 import '../products/esync/esync_page.dart';
 import '../products/famfi/famfi_console_page.dart';
 import '../products/famfi/famfi_page.dart';
+import '../products/hoopsync/hoopsync_page.dart';
+import '../products/hundredfold/hundredfold_legal_page.dart';
+import '../products/hundredfold/hundredfold_page.dart';
+import '../products/marketpulse/marketpulse_console_page.dart';
+import '../products/marketpulse/marketpulse_page.dart';
 import '../products/notesync/notesync_page.dart';
 import '../products/plansync/desk/desk_page.dart';
 import '../products/plansync/plansync_page.dart';
 import '../products/stanverse/desk/stanverse_desk_page.dart';
 import '../products/stanverse/stanverse_page.dart';
 import '../products/travelsync/travelsync_page.dart';
+import '../products/vestiary/vestiary_page.dart';
 import '../products/workit/desk/workit_desk_page.dart';
 import '../products/workit/workit_legal_page.dart';
 import '../products/workit/workit_page.dart';
@@ -59,6 +66,18 @@ final pages = <String, WidgetBuilder>{
   '/esync/charges': (_) => const ESyncPage(initialSection: 'charges'),
   '/esync/service': (_) => const ESyncPage(initialSection: 'service'),
   '/esync/boards': (_) => const ESyncPage(initialSection: 'boards'),
+  '/hoopsync': (_) => const HoopSyncPage(),
+  '/vestiary': (_) => const VestiaryPage(),
+  '/marketpulse': (_) => const MarketPulsePage(),
+  // My desk: the phone app's screens on a wide display.
+  '/marketpulse/personal': (_) => const MarketPulseConsolePage(),
+  '/hundredfold': (_) => HundredFoldPage(),
+  '/hundredfold/hunters': (_) => HundredFoldPage(initialSection: 'hunters'),
+  '/hundredfold/debt': (_) => HundredFoldPage(initialSection: 'debt'),
+  '/hundredfold/privacy': (_) => const HundredFoldPrivacyPage(),
+  '/hundredfold/terms': (_) => const HundredFoldTermsPage(),
+  '/hundredfold/support': (_) => const HundredFoldSupportPage(),
+  ...appLegalPages,
   '/famfi': (_) => const FamFiPage(),
   // The desktop console — every control the phone app has. Linked from
   // /famfi's nav and hero.

@@ -434,7 +434,9 @@ class FamFiConsoleBody extends StatefulWidget {
 
 class _ConsoleState extends State<FamFiConsoleBody> {
   // Read live: someone can join while the console is open.
-  List<Owner> get _owners => Owner.people;
+  // In debt mode only the first member's cheque is split.
+  List<Owner> get _owners =>
+      widget.store.debtMode ? [Owner.first] : Owner.people;
 
   // The tab rides in the URL (?tab=), so a reload lands back where you were.
   FFTab _tab =
@@ -444,6 +446,7 @@ class _ConsoleState extends State<FamFiConsoleBody> {
   bool _refreshing = false;
   int _reloadSeq = 0;
   Owner? _ownerFilter;
+  bool _owing = false; // rail shows only what the signed-in person owes
   String? _selectedAccountId;
   Widget? _drawerChild;
   // Separate from _drawerChild so a closing drawer keeps its form on screen
@@ -807,6 +810,9 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                         ownerFilter: _ownerFilter,
                                         onOwnerFilterChanged: (o) =>
                                             setState(() => _ownerFilter = o),
+                                        owing: _owing,
+                                        onOwingChanged: (v) =>
+                                            setState(() => _owing = v),
                                         selectedAccountId: _selectedAccountId,
                                         onSelectAccount: _openAccountDrawer,
                                         onAddAccount: () => openDrawer(
@@ -836,6 +842,9 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                         ownerFilter: _ownerFilter,
                                         onOwnerFilterChanged: (o) =>
                                             setState(() => _ownerFilter = o),
+                                        owing: _owing,
+                                        onOwingChanged: (v) =>
+                                            setState(() => _owing = v),
                                         selectedAccountId: _selectedAccountId,
                                         onSelectAccount: _openAccountDrawer,
                                         onAddAccount: () => openDrawer(
@@ -882,7 +891,6 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                             // form doesn't relayout every frame of the slide.
                             Positioned(
                               top: 0,
-                              bottom: 0,
                               right: 0,
                               width: 440,
                               child: IgnorePointer(
@@ -894,6 +902,10 @@ class _ConsoleState extends State<FamFiConsoleBody> {
                                   child: RepaintBoundary(
                                     child: Material(
                                       elevation: 12,
+                                      clipBehavior: Clip.antiAlias,
+                                      borderRadius: const BorderRadius.only(
+                                        bottomLeft: Radius.circular(16),
+                                      ),
                                       // Offscreen form stays out of tab order.
                                       child: ExcludeFocus(
                                         excluding: !_drawerOpen,

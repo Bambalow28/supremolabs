@@ -216,6 +216,27 @@ const products = <Product>[
     category: 'Sports',
     tagline: 'Built for the game.',
     cluster: Cluster.body,
+    route: '/hoopsync',
+    icon: 'assets/icons/hoopsync.png',
+    ground: Color(0xFF09090B), // hoopsync tokens.dart Hs.ink
+    accent: Color(0xFFFF6A1F), // hoopsync tokens.dart Hs.hot
+    story: Story(
+      problem:
+          "Running a league means a spreadsheet, a group chat and a scorebook.",
+      mine:
+          "The platform I run my own leagues on: rosters, live stats, standings.",
+      mineLabel: 'In my day',
+    ),
+  ),
+  Product(
+    name: 'HundredFold',
+    category: 'Game',
+    tagline: 'They pay a hundredfold.',
+    cluster: Cluster.money,
+    route: '/hundredfold',
+    icon: 'assets/icons/hundredfold.png',
+    ground: Color(0xFF050806), // hundredfold theme.dart ink
+    accent: Color(0xFFFFB020), // hundredfold theme.dart amber
   ),
   Product(
     name: 'Jarvis',
@@ -224,11 +245,38 @@ const products = <Product>[
     cluster: Cluster.everyday,
   ),
   Product(
-    name: 'DressMeUp',
+    name: 'Vestiary',
     category: 'Lifestyle',
-    tagline: 'Your closet, organized.',
+    tagline: 'Your closet, laid out.',
     cluster: Cluster.everyday,
-    icon: 'assets/icons/dressmeup.png',
+    route: '/vestiary',
+    icon: 'assets/icons/vestiary.png',
+    ground: Color(0xFF0E1220), // vestiary tissue-night
+    accent: Color(0xFFFF7A45), // vestiary vermilion-night
+    story: Story(
+      problem:
+          "Standing in front of a full closet and still not knowing what to wear.",
+      mine:
+          "A closet of her actual pieces, laid out so outfits can be tried before they are worn.",
+      mineLabel: 'What it is for',
+    ),
+  ),
+  Product(
+    name: 'MarketPulse',
+    category: 'Markets',
+    tagline: 'The news, and what it could move.',
+    cluster: Cluster.money,
+    route: '/marketpulse',
+    icon: 'assets/icons/marketpulse.png',
+    ground: Color(0xFF07101C), // marketpulse navy
+    accent: Color(0xFF2ED68B), // marketpulse pulse green
+    story: Story(
+      problem:
+          "Market news arrives faster than anyone can judge what it means.",
+      mine:
+          "My own wire: headlines, a first read on impact, and past look-alike days.",
+      mineLabel: 'In my day',
+    ),
   ),
 ];
 

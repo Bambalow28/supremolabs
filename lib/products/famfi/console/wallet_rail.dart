@@ -4,7 +4,9 @@
 import 'package:flutter/material.dart';
 import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
+import 'package:juwa_wealth/ui/accounts/accounts_screen.dart' show OweView;
 import 'package:juwa_wealth/ui/accounts/wallet_card.dart' show WalletCard;
+import 'package:juwa_wealth/ui/sides.dart';
 import 'package:juwa_wealth/widgets.dart';
 
 import '../ff_theme.dart';
@@ -13,6 +15,10 @@ class WalletRail extends StatelessWidget {
   final JuwaStore store;
   final Owner? ownerFilter;
   final ValueChanged<Owner?> onOwnerFilterChanged;
+
+  /// "I owe" view: only debt accounts, at the signed-in person's share.
+  final bool owing;
+  final ValueChanged<bool> onOwingChanged;
   final String? selectedAccountId;
   final ValueChanged<Account> onSelectAccount;
   final VoidCallback onAddAccount;
@@ -35,6 +41,8 @@ class WalletRail extends StatelessWidget {
     required this.store,
     required this.ownerFilter,
     required this.onOwnerFilterChanged,
+    required this.owing,
+    required this.onOwingChanged,
     required this.selectedAccountId,
     required this.onSelectAccount,
     required this.onAddAccount,
@@ -75,6 +83,9 @@ class WalletRail extends StatelessWidget {
         ? store.accounts
         : store.accounts.where((a) => a.owner == ownerFilter);
     final total = visible.fold(0.0, (s, a) => s + store.balanceOf(a.id));
+    final second = Owner.second;
+    final debt =
+        store.debtMode && second != null && store.debtAccounts.isNotEmpty;
 
     final header = Padding(
       padding: EdgeInsets.fromLTRB(24, compact ? 8 : 20, compact ? 8 : 12, 0),
@@ -84,7 +95,10 @@ class WalletRail extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text('Household', style: ff(13, color: c.muted)),
+                child: Text(
+                  debt ? 'Debt left' : 'Household',
+                  style: ff(13, color: c.muted),
+                ),
               ),
               _toggle(context),
             ],
@@ -96,9 +110,37 @@ class WalletRail extends StatelessWidget {
               children: [
                 if (loading)
                   const SkeletonBox(width: 150, height: 34)
-                else
+                else if (debt) ...[
                   Text(
-                    ffAmount(total),
+                    ffAmount(store.debtTotal),
+                    style: ff(
+                      30,
+                      weight: FontWeight.w800,
+                      color: store.debtTotal > 0.005
+                          ? moneyDownBright
+                          : moneyColor(-store.debtTotal),
+                      spacing: -0.9,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SidesBar(
+                    first: store.debtOf(Owner.first),
+                    second: store.debtOf(second),
+                    firstColor: c.ink,
+                    secondColor: secondSideColor(context),
+                  ),
+                  const SizedBox(height: 7),
+                  SidesKey(
+                    first: store.debtOf(Owner.first),
+                    second: store.debtOf(second),
+                  ),
+                  if (store.titaOwed.abs() >= 0.005) ...[
+                    const SizedBox(height: 6),
+                    TitaKey(owed: store.titaOwed),
+                  ],
+                ] else
+                  Text(
+                    ffMoney(total),
                     style: ff(
                       30,
                       weight: FontWeight.w800,
@@ -107,12 +149,38 @@ class WalletRail extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(height: 14),
-                SegmentedTabs(
-                  labels: ['All', for (final o in Owner.all) o.title],
-                  selected: _owners.indexOf(ownerFilter),
-                  onChanged: (i) => onOwnerFilterChanged(_owners[i]),
+                if (store.debtAccounts.isNotEmpty) ...[
+                  SegmentedTabs(
+                    labels: const ['Wallet', 'I owe'],
+                    selected: owing ? 1 : 0,
+                    onChanged: (i) => onOwingChanged(i == 1),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (!owing)
+                  SegmentedTabs(
+                    labels: ['All', for (final o in Owner.all) o.title],
+                    selected: _owners.indexOf(ownerFilter),
+                    onChanged: (i) => onOwnerFilterChanged(_owners[i]),
+                  ),
+                const SizedBox(height: 8),
+                Tooltip(
+                  message:
+                      '${Owner.first.title} pays every bill; joint debts '
+                      'split by side. Applies on every device.',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text('Debt mode', style: ff(13, color: c.muted)),
+                      ),
+                      Switch(
+                        value: store.debtMode,
+                        onChanged: store.setDebtMode,
+                        activeTrackColor: c.good,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 12),
               ],
             ),
           ),
@@ -120,7 +188,16 @@ class WalletRail extends StatelessWidget {
       ),
     );
 
-    final cards = loading
+    final cards = owing && store.debtAccounts.isNotEmpty
+        ? Padding(
+            padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
+            child: OweView(
+              store: store,
+              debts: store.debtAccounts.toList(),
+              onOpen: onSelectAccount,
+            ),
+          )
+        : loading
         ? ListView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -406,6 +483,7 @@ class _RailCard extends StatelessWidget {
               child: WalletCard(
                 account: account,
                 balance: store.balanceOf(account.id),
+                sides: sidesFor(store, account),
               ),
             ),
           ),

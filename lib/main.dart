@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:http/http.dart' as http;
+import 'products/marketpulse/mp_proxy.dart';
 import 'app/backends.dart';
 import 'app/router.dart';
 import 'theme/sl_theme.dart';
@@ -13,7 +15,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Backends start in the background; only the pages that need one wait.
   unawaited(startBackends());
-  runApp(const SupremoLabsApp());
+  await MPProxy.load();
+  // MarketPulse's console reaches feeds through MPClient; see mp_proxy.dart.
+  http.runWithClient(() => runApp(const SupremoLabsApp()), MPClient.new);
 }
 
 // Flutter's default web ScrollBehavior only lets touch/stylus drag a

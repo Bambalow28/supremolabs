@@ -62,4 +62,12 @@ void main() {
     expect(page, isNot(isA<MaterialPage<dynamic>>()));
     expect(page.transitionDuration, const Duration(milliseconds: 760));
   });
+
+  test('every app has privacy and support routes', () {
+    for (final a in ['diamo', 'notesync', 'papersync', 'plansync', 'stagehand', 'stanverse', 'vestiary']) {
+      expect(pages.containsKey('/$a/privacy'), isTrue, reason: a);
+      expect(pages.containsKey('/$a/support'), isTrue, reason: a);
+    }
+    expect(pages.containsKey('/stanverse/terms'), isTrue);
+  });
 }

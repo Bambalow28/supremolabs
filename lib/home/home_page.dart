@@ -10,6 +10,7 @@ import '../app/motion.dart';
 import '../app/site_shell.dart';
 import '../data/products.dart';
 import '../theme/sl_theme.dart';
+import 'wall.dart';
 
 /// Catalog number, in lineup order — the only numbering on the page.
 String catalogNo(Product p) =>
@@ -43,7 +44,7 @@ class HomePage extends StatelessWidget {
         _Masthead(),
         _Crate(),
         SLRule(),
-        _Discography(),
+        Wall(),
         SLRule(),
         _LinerNotes(),
       ],
@@ -560,146 +561,6 @@ class _Action extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-/// The full catalog, as a label lists it: number, title, genre, status.
-class _Discography extends StatelessWidget {
-  const _Discography();
-
-  @override
-  Widget build(BuildContext context) {
-    final narrow = MediaQuery.sizeOf(context).width < 760;
-    return SLPage(
-      padding: EdgeInsets.fromLTRB(24, narrow ? 56 : 80, 24, narrow ? 56 : 88),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FadeSlideIn(
-            child: Text('Discography', style: SLType.display(narrow ? 44 : 64)),
-          ),
-          SizedBox(height: narrow ? 24 : 36),
-          const Divider(color: SLColors.hairline, height: 1, thickness: 1),
-          for (final p in products) _Track(product: p, narrow: narrow),
-        ],
-      ),
-    );
-  }
-}
-
-class _Track extends StatelessWidget {
-  final Product product;
-  final bool narrow;
-  const _Track({required this.product, required this.narrow});
-
-  @override
-  Widget build(BuildContext context) {
-    final live = product.live;
-    final color = lineInk(product.accent ?? SLColors.inkMuted);
-    return Semantics(
-      button: live,
-      enabled: live,
-      label: live
-          ? 'Open ${product.name}. ${product.tagline}'
-          : '${product.name}, forthcoming. ${product.tagline}',
-      child: Hover(
-        onTap: live ? () => _open(context, product) : null,
-        builder: (context, hovered) => AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            horizontal: narrow ? 4 : 12,
-            vertical: narrow ? 16 : 20,
-          ),
-          decoration: BoxDecoration(
-            color: hovered ? color.withValues(alpha: 0.08) : Colors.transparent,
-            border: const Border(
-              bottom: BorderSide(color: SLColors.divider, width: 1),
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              if (!narrow)
-                SizedBox(
-                  width: 96,
-                  child: Text(
-                    catalogNo(product),
-                    style: SLType.label(SLColors.inkMuted),
-                  ),
-                ),
-              // The release's icon, as it sits on the home screen; dimmed
-              // while forthcoming.
-              AnimatedScale(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOut,
-                scale: hovered ? 1.08 : 1,
-                child: Opacity(
-                  opacity: live ? 1 : 0.5,
-                  child: AppIcon(product: product, size: narrow ? 44 : 52),
-                ),
-              ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (narrow) ...[
-                      Text(
-                        catalogNo(product),
-                        style: SLType.label(SLColors.inkMuted),
-                      ),
-                      const SizedBox(height: 4),
-                    ],
-                    AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 180),
-                      style: SLType.display(narrow ? 24 : 30).copyWith(
-                        color: hovered
-                            ? color
-                            : (live ? SLColors.ink : SLColors.inkMuted),
-                      ),
-                      child: Text(product.name),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(product.tagline, style: SLType.body(15)),
-                  ],
-                ),
-              ),
-              if (!narrow)
-                SizedBox(
-                  width: 150,
-                  child: Text(product.cluster.label, style: SLType.body(15)),
-                ),
-              ConstrainedBox(
-                constraints: BoxConstraints(minWidth: narrow ? 0 : 132),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      live ? 'OUT NOW' : 'FORTHCOMING',
-                      style: SLType.label(live ? color : SLColors.inkMuted),
-                    ),
-                    if (live) ...[
-                      const SizedBox(width: 8),
-                      AnimatedSlide(
-                        duration: const Duration(milliseconds: 180),
-                        offset: hovered ? const Offset(0.3, 0) : Offset.zero,
-                        child: Icon(
-                          Icons.arrow_forward,
-                          size: 14,
-                          color: color,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

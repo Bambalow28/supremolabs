@@ -103,12 +103,16 @@ class SiteShell extends StatefulWidget {
   /// width so the chrome's edges line up with its content's.
   final double maxWidth;
 
+  /// Lets a page that must follow or steer the scroll own it.
+  final ScrollController? controller;
+
   const SiteShell({
     super.key,
     required this.children,
     this.ground,
     this.trailing,
     this.maxWidth = slMaxContentWidth,
+    this.controller,
   });
 
   @override
@@ -116,11 +120,11 @@ class SiteShell extends StatefulWidget {
 }
 
 class _SiteShellState extends State<SiteShell> {
-  final _scroll = ScrollController();
+  late final _scroll = widget.controller ?? ScrollController();
 
   @override
   void dispose() {
-    _scroll.dispose();
+    if (widget.controller == null) _scroll.dispose();
     super.dispose();
   }
 

@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:juwa_wealth/models.dart';
 import 'package:juwa_wealth/store.dart';
 import 'package:juwa_wealth/ui/accounts/wallet_card.dart' show PhysicalCard;
+import 'package:juwa_wealth/ui/sides.dart';
+import 'package:juwa_wealth/ui/transactions/receipt_slip.dart';
 import 'package:juwa_wealth/ui/transactions/transactions_screen.dart'
     show dayLabel, newestFirst;
 import 'package:juwa_wealth/ui/bills/bills_screen.dart' show freqLabel;
@@ -60,6 +62,7 @@ class DrawerScaffold extends StatelessWidget {
         width: 440,
         color: c.surface,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(28, 22, 20, 8),
@@ -79,7 +82,7 @@ class DrawerScaffold extends StatelessWidget {
                 ],
               ),
             ),
-            Expanded(
+            Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(28, 8, 28, 28),
                 child: Column(
@@ -357,6 +360,11 @@ class _AccountDrawerState extends State<AccountDrawer> {
         ? ''
         : AmountField.format(widget.account!.balance.abs()),
   );
+  late final _second = TextEditingController(
+    text: widget.account?.secondOpening == null
+        ? ''
+        : AmountField.format(widget.account!.secondOpening!.abs()),
+  );
   late AccountKind _kind = widget.account?.kind ?? AccountKind.chequing;
   late Owner _owner = widget.account?.owner ?? widget.store.me;
   late String _color = widget.account?.color ?? juwaSwatches.first.key;
@@ -369,7 +377,20 @@ class _AccountDrawerState extends State<AccountDrawer> {
   void dispose() {
     _name.dispose();
     _balance.dispose();
+    _second.dispose();
     super.dispose();
+  }
+
+  /// The second member's part of the opening balance (same sign); empty
+  /// means half. Left as saved unless this is a joint account in debt mode.
+  double? get _secondOpening {
+    if (_owner != Owner.joint) return null;
+    if (!widget.store.debtMode) return widget.account?.secondOpening;
+    final v = AmountField.parse(_second.text)?.abs();
+    final cap = AmountField.parse(_balance.text)?.abs();
+    if (v == null) return null;
+    final part = cap == null || v < cap ? v : cap;
+    return _owes ? -part : part;
   }
 
   Future<void> _save() async {
@@ -385,6 +406,7 @@ class _AccountDrawerState extends State<AccountDrawer> {
       kind: _kind,
       owner: _owner,
       balance: _owes ? -bal.abs() : bal.abs(),
+      secondOpening: _secondOpening,
     );
     if (_editing) {
       await store.updateAccount(account);
@@ -472,6 +494,17 @@ class _AccountDrawerState extends State<AccountDrawer> {
             onChanged: (i) => setState(() => _owner = Owner.all[i]),
           ),
         ),
+        if (widget.store.debtMode &&
+            _owner == Owner.joint &&
+            Owner.second != null)
+          DField(
+            label: "${Owner.second!.title}'s part (blank = half)",
+            child: DAmount(
+              controller: _second,
+              fontSize: 16,
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
         DField(
           label: 'Colour',
           child: SwatchGrid(
@@ -557,14 +590,29 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
       widget.transaction?.accountId ??
       (widget.store.accounts.isEmpty ? null : widget.store.accounts.first.id);
   late DateTime _date = widget.transaction?.date ?? DateTime.now();
+  late String? _who = widget.transaction?.who;
+  late double? _secondPart = widget.transaction?.secondPart;
   late String? _categoryId = widget.transaction?.categoryId;
+  late final _secondPays = TextEditingController(
+    text: widget.transaction?.secondPays?.toStringAsFixed(2) ?? '',
+  );
   late Owner _by = widget.transaction?.by ?? widget.store.me;
 
   bool get _editing => widget.transaction != null;
 
+  /// The chosen account is a card or line of credit (where Tita applies).
+  bool get _owes {
+    final a = widget.store.accounts
+        .where((a) => a.id == _accountId)
+        .firstOrNull;
+    return a != null &&
+        (a.kind == AccountKind.credit || a.kind == AccountKind.loc);
+  }
+
   @override
   void dispose() {
     _amount.dispose();
+    _secondPays.dispose();
     _name.dispose();
     _note.dispose();
     _link.dispose();
@@ -613,6 +661,7 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
   Future<void> _save() async {
     final amt = AmountField.parse(_amount.text);
     if (amt == null || amt == 0 || _accountId == null) return;
+    if (whoIncomplete(_who, _secondPart)) return;
     final store = widget.store;
     final id = widget.transaction?.id ?? store.newId();
     final tx = Transaction(
@@ -623,13 +672,24 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
       name: _name.text.trim().isEmpty
           ? (_received ? 'Received' : 'Spent')
           : _name.text.trim(),
-      categoryId: _categoryId,
+      categoryId: _received
+          ? (_categoryId == ryanCategory.id ||
+                    (_categoryId == titaCategory.id && _owes)
+                ? _categoryId
+                : null)
+          : _categoryId,
       billId: widget.transaction?.billId,
       paydayId: widget.transaction?.paydayId,
       by: _by,
       note: _note.text.trim().isEmpty ? null : _note.text.trim(),
       receipt: widget.transaction?.receipt,
-      link: _link.text.trim().isEmpty ? null : _link.text.trim(),
+      link: _received || _link.text.trim().isEmpty ? null : _link.text.trim(),
+      who: _who,
+      secondPart: _who == splitCustom ? _secondPart : null,
+      contribution: widget.transaction?.contribution ?? false,
+      secondPays: !_received && _categoryId == ryanCategory.id
+          ? AmountField.parse(_secondPays.text)?.abs()
+          : null,
     );
     if (_editing) {
       await store.updateTransaction(tx);
@@ -719,16 +779,68 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
             child: Text(ffDate(_date), style: ff(14, color: c.ink)),
           ),
         ),
-        DField(
-          label: 'Category',
-          child: DPickerButton(
-            onTap: _pickCategory,
-            child: Text(
-              categoryLabel(widget.store, _categoryId),
-              style: ff(14, color: c.ink),
+        if (!_received)
+          DField(
+            label: 'Category',
+            child: DPickerButton(
+              onTap: _pickCategory,
+              child: Text(
+                categoryLabel(widget.store, _categoryId),
+                style: ff(14, color: c.ink),
+              ),
+            ),
+          )
+        else ...[
+          if (account != null &&
+              (account.kind == AccountKind.credit ||
+                  account.kind == AccountKind.loc))
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text("For Tita's expenses", style: ff(14, color: c.ink)),
+              value: _categoryId == titaCategory.id,
+              onChanged: (on) =>
+                  setState(() => _categoryId = on ? titaCategory.id : null),
+            ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('Paid back by Ryan', style: ff(14, color: c.ink)),
+            value: _categoryId == ryanCategory.id,
+            onChanged: (on) =>
+                setState(() => _categoryId = on ? ryanCategory.id : null),
+          ),
+        ],
+        if (!_received && _categoryId == ryanCategory.id)
+          DField(
+            label: '${ryanCategory.name} pays',
+            child: DAmount(controller: _secondPays),
+          ),
+        if (widget.store.debtMode &&
+            Owner.second != null &&
+            !isDependentCategory(_categoryId) &&
+            !(widget.transaction?.contribution ?? false))
+          DField(
+            label: 'Who is this for',
+            child: WhoPicker(
+              who: _who ?? defaultWho(account),
+              secondPart: _secondPart,
+              amount: (AmountField.parse(_amount.text) ?? 0).abs(),
+              onChanged: (who, part) => setState(() {
+                _who = who;
+                _secondPart = part;
+              }),
             ),
           ),
-        ),
+        if (account != null)
+          TxImpactCard(
+            store: widget.store,
+            account: account,
+            signed:
+                (_received ? 1 : -1) *
+                (AmountField.parse(_amount.text) ?? 0).abs(),
+            split: editorSplit(account, _who, _secondPart, _categoryId),
+            tita: _categoryId == titaCategory.id,
+            replacing: widget.transaction,
+          ),
         DField(
           label: 'By',
           child: SegmentedTabs(
@@ -748,46 +860,47 @@ class _TransactionDrawerState extends State<TransactionDrawer> {
             style: ff(14, color: c.ink),
           ),
         ),
-        DField(
-          label: 'Order link',
-          child: TextField(
-            controller: _link,
-            autocorrect: false,
-            keyboardType: TextInputType.url,
-            style: ff(14, color: c.ink),
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: 'Amazon order page, store link…',
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_link.text.trim().isNotEmpty)
+        if (!_received)
+          DField(
+            label: 'Order link',
+            child: TextField(
+              controller: _link,
+              autocorrect: false,
+              keyboardType: TextInputType.url,
+              style: ff(14, color: c.ink),
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                hintText: 'Amazon order page, store link…',
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_link.text.trim().isNotEmpty)
+                      IconButton(
+                        tooltip: 'Open',
+                        icon: Icon(
+                          Icons.open_in_new_rounded,
+                          size: 18,
+                          color: FFColors.accentInk,
+                        ),
+                        onPressed: () => launchUrl(
+                          Uri.parse(_normalizedLink(_link.text.trim())),
+                          webOnlyWindowName: '_blank',
+                        ),
+                      ),
                     IconButton(
-                      tooltip: 'Open',
+                      tooltip: 'Paste',
                       icon: Icon(
-                        Icons.open_in_new_rounded,
+                        Icons.content_paste_rounded,
                         size: 18,
-                        color: FFColors.accentInk,
+                        color: c.muted,
                       ),
-                      onPressed: () => launchUrl(
-                        Uri.parse(_normalizedLink(_link.text.trim())),
-                        webOnlyWindowName: '_blank',
-                      ),
+                      onPressed: _pasteLink,
                     ),
-                  IconButton(
-                    tooltip: 'Paste',
-                    icon: Icon(
-                      Icons.content_paste_rounded,
-                      size: 18,
-                      color: c.muted,
-                    ),
-                    onPressed: _pasteLink,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
         if (widget.transaction?.receipt != null)
           receiptField(context, widget.store, widget.transaction!.receipt!),
         if (widget.transaction != null)
@@ -840,6 +953,8 @@ class _BillDrawerState extends State<BillDrawer> {
   late String _color = widget.bill?.color ?? juwaSwatches.first.key;
   late String _icon = widget.bill?.icon ?? juwaIcons.keys.first;
   late String? _accountId = widget.bill?.accountId;
+  late String? _who = widget.bill?.who;
+  late double? _secondPart = widget.bill?.secondPart;
 
   bool get _editing => widget.bill != null;
 
@@ -875,6 +990,7 @@ class _BillDrawerState extends State<BillDrawer> {
   Future<void> _save() async {
     final amt = AmountField.parse(_amount.text);
     if (amt == null || _name.text.trim().isEmpty) return;
+    if (whoIncomplete(_who, _secondPart)) return;
     final store = widget.store;
     final bill = Bill(
       id: widget.bill?.id ?? store.newId(),
@@ -885,6 +1001,8 @@ class _BillDrawerState extends State<BillDrawer> {
       firstDate: _firstDate,
       repeat: _repeat,
       accountId: _accountId,
+      who: _who,
+      secondPart: _who == splitCustom ? _secondPart : null,
     );
     if (_editing) {
       await store.updateBill(bill);
@@ -983,6 +1101,19 @@ class _BillDrawerState extends State<BillDrawer> {
             onChanged: (v) => setState(() => _icon = v),
           ),
         ),
+        if (widget.store.debtMode && Owner.second != null)
+          DField(
+            label: 'Who is this for',
+            child: WhoPicker(
+              who: _who ?? splitBoth,
+              secondPart: _secondPart,
+              amount: AmountField.parse(_amount.text) ?? 0,
+              onChanged: (who, part) => setState(() {
+                _who = who;
+                _secondPart = part;
+              }),
+            ),
+          ),
         DField(
           label: 'Pays from',
           child: DPickerButton(
@@ -1050,6 +1181,8 @@ class _BudgetDrawerState extends State<BudgetDrawer> {
   );
   late BudgetPeriod _period = widget.budget?.period ?? BudgetPeriod.monthly;
   late DateTime? _startDate = widget.budget?.startDate;
+  late String _color = widget.budget?.color ?? juwaSwatches.first.key;
+  late String _icon = widget.budget?.icon ?? juwaIcons.keys.first;
 
   bool get _editing => widget.budget != null;
 
@@ -1096,6 +1229,8 @@ class _BudgetDrawerState extends State<BudgetDrawer> {
       month: '',
       period: _period,
       startDate: _startDate,
+      color: _color,
+      icon: _icon,
     );
     // Stamp the hand-entered amount with the period it was typed for.
     final budget = draft.copyWith(month: draft.periodKey(DateTime.now()));
@@ -1110,6 +1245,7 @@ class _BudgetDrawerState extends State<BudgetDrawer> {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final swatch = swatchFor(_color);
     return DrawerScaffold(
       title: _editing ? 'Edit budget' : 'New category',
       onClose: widget.onClose,
@@ -1154,6 +1290,22 @@ class _BudgetDrawerState extends State<BudgetDrawer> {
         DField(
           label: 'Spent this ${_period.noun}',
           child: DAmount(controller: _spent, fontSize: 18),
+        ),
+        DField(
+          label: 'Colour',
+          child: SwatchGrid(
+            selected: _color,
+            onChanged: (v) => setState(() => _color = v),
+          ),
+        ),
+        DField(
+          label: 'Icon',
+          child: IconGrid(
+            selected: _icon,
+            activeColor: swatch.color,
+            activeOn: swatch.on,
+            onChanged: (v) => setState(() => _icon = v),
+          ),
         ),
         if (widget.budget != null)
           OutlinedButton(
@@ -1479,7 +1631,6 @@ class TransactionDetailDrawer extends StatelessWidget {
     final account = store.accounts
         .where((a) => a.id == tx.accountId)
         .firstOrNull;
-    final swatch = swatchFor(account?.color ?? 'graphite');
     final received = tx.amount > 0;
     return DrawerScaffold(
       title: 'Transaction',
@@ -1489,11 +1640,6 @@ class TransactionDetailDrawer extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              tx.name,
-              style: ff(20, weight: FontWeight.w700, color: c.ink),
-            ),
-            const SizedBox(height: 6),
             Text(
               ffAmount(tx.amount),
               style: ff(
@@ -1508,44 +1654,43 @@ class TransactionDetailDrawer extends StatelessWidget {
             ),
           ],
         ),
-        DRead(
-          label: 'Account',
-          child: Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: swatch.color,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                account?.name ?? 'Deleted account',
-                style: ff(15, color: c.ink),
-              ),
-            ],
+        if (account != null)
+          TxImpactCard(
+            store: store,
+            account: account,
+            signed: tx.amount,
+            split: store.splitOf(tx),
+            replacing: tx,
+            tita: tx.categoryId == titaCategory.id,
+            title: '${account.name} with this transaction',
           ),
-        ),
-        DRead(
-          label: 'Date',
-          child: Text(ffDate(tx.date), style: ff(15, color: c.ink)),
-        ),
-        DRead(
-          label: 'Category',
-          child: Text(
-            categoryLabel(store, tx.categoryId),
-            style: ff(15, color: c.ink),
+        // The same slip the phone draws: the scan when there is one, else
+        // the typed-in transaction as a one-line slip.
+        if (tx.scan != null)
+          ReceiptSlip(
+            merchant: tx.scan!.merchant ?? tx.name,
+            address: tx.scan!.address,
+            time: tx.scan!.time,
+            date: tx.date,
+            items: tx.scan!.items,
+            extras: tx.scan!.extras,
+            total: tx.scan!.total ?? tx.amount.abs(),
+            paid: tx.scan!.paid,
+            account: account,
+            categoryLabel: categoryLabel(store, tx.categoryId),
+            by: tx.by,
+          )
+        else
+          ReceiptSlip(
+            merchant: tx.name,
+            date: tx.date,
+            items: [ReceiptLine(tx.name, tx.amount.abs())],
+            extras: const [],
+            total: tx.amount.abs(),
+            account: account,
+            categoryLabel: categoryLabel(store, tx.categoryId),
+            by: tx.by,
           ),
-        ),
-        DRead(
-          label: 'Added by',
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: FFStamp(tx.by.label, color: c.muted),
-          ),
-        ),
         if (tx.billId != null || tx.paydayId != null)
           Text(
             tx.billId != null
@@ -1553,6 +1698,19 @@ class TransactionDetailDrawer extends StatelessWidget {
                 : 'Written automatically by a payday.',
             style: ff(12.5, color: c.muted),
           ),
+        if (tx.titaPart != null) ...[
+          DRead(
+            label: "Paid Tita's expenses",
+            child: Text(ffAmount(tx.titaPart!), style: ff(14, color: c.ink)),
+          ),
+          DRead(
+            label: account?.name ?? 'Account',
+            child: Text(
+              ffAmount(tx.amount - tx.titaPart!),
+              style: ff(14, color: c.ink),
+            ),
+          ),
+        ],
         if (tx.note != null && tx.note!.isNotEmpty)
           DRead(
             label: 'Note',
@@ -1747,7 +1905,11 @@ class BudgetDetailDrawer extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            BudgetBar(spent: spent, target: b.monthlyTarget, color: c.tint),
+            BudgetBar(
+              spent: spent,
+              target: b.monthlyTarget,
+              color: budgetTone(c, b.color, spent, b.monthlyTarget),
+            ),
             const SizedBox(height: 10),
             Text(
               '${b.period.label} · restarts ${b.restartLabel.toLowerCase()}',

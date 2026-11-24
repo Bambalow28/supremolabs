@@ -274,6 +274,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Transactions').first);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(_inLedger('Loblaws'));
+    await tester.pumpAndSettle();
     await tester.tap(_inLedger('Loblaws'));
     await tester.pumpAndSettle();
     expect(find.text('Transaction'), findsOneWidget);

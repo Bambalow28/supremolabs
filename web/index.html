@@ -57,6 +57,25 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script>
+    // The browser can drop the page's GPU context (background tab, sleep, GPU
+    // pressure); CanvasKit usually restores it, but when it doesn't the page
+    // stays white. Reload if no restore lands within 3s — at most once a
+    // minute, so a machine that keeps losing its GPU can't reload-loop.
+    document.addEventListener('webglcontextlost', function () {
+      var t = setTimeout(function () {
+        try {
+          var last = +sessionStorage.getItem('glReload') || 0;
+          if (Date.now() - last < 60000) return;
+          sessionStorage.setItem('glReload', Date.now());
+        } catch (e) {}
+        location.reload();
+      }, 3000);
+      document.addEventListener('webglcontextrestored', function () {
+        clearTimeout(t);
+      }, { capture: true, once: true });
+    }, true);
+  </script>
   <script>{{flutter_bootstrap_js}}</script>
 </body>
 </html>

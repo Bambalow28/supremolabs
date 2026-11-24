@@ -31,9 +31,9 @@ verified, cert provisioning).
 ## Design
 
 Dark, record-label world — the home page is Supremo Labs' catalog: every app is
-a numbered release (SL 001–SL 011), shown as spines in a crate with one sleeve
+a numbered release (SL 001–SL 013), shown as spines in a crate with one sleeve
 pulled face-out in the product's own color (real app screen where one exists,
-typographic otherwise; forthcoming releases are blank keyline sleeves), then a
-discography list and liner notes. Big Shoulders Display + Hanken Grotesk.
+typographic otherwise; forthcoming releases are blank keyline sleeves), then
+the Wall (a salon hang of pixel-art paintings, one per app, `lib/home/wall.dart`) and liner notes. Big Shoulders Display + Hanken Grotesk.
 Retired the living-web (mesh) hero in full. Shaped via `/impeccable`; see
 `DESIGN.md`.

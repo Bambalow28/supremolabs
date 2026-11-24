@@ -74,7 +74,7 @@ components:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink-muted}"
     rounded: "{rounded.none}"
-  discography-row:
+  wall-plaque:
     backgroundColor: "transparent"
     textColor: "{colors.ink}"
     typography: "{typography.title}"
@@ -96,16 +96,16 @@ site was, never authority over what it is now.
 **Mechanism:** the whole catalog stands in one crate. Every release is a
 spine in catalog order; one is always pulled face-out as a square sleeve. A
 visitor digs the crate, pulls a sleeve, and opens that release. Coherence is
-shown by eleven releases sharing one shelf, one numbering, and one sleeve
+shown by thirteen releases sharing one shelf, one numbering, and one sleeve
 format, not claimed in copy.
 
 **Taxonomy: catalog order and genre, both from one file.**
 `lib/data/products.dart` is the only source. Its list order is the catalog
 order, and `catalogNo()` in `lib/home/home_page.dart` derives `SL 001` to
-`SL 011` from that index. `Cluster` (Journeys, Money, Everyday, Body, People)
+`SL 013` from that index. `Cluster` (Journeys, Money, Everyday, Body, People)
 is the release's genre: printed on the sleeve, in the notes credit, and in
-the discography's genre column. A new release joins the crate, the numbering,
-and the discography by being appended to `products.dart`; nothing on the page
+the plaque. A new release joins the crate, the numbering,
+and the wall by being appended to `products.dart`; nothing on the page
 is edited by hand.
 
 **The Catalog Number Rule.** `SL` plus a three-digit index is the only
@@ -117,7 +117,7 @@ figures. Never type a catalog number, never renumber by reordering for taste.
 release's name typographically. Never a mock, stand-in, or generated screen.
 
 **The Keyline Means Forthcoming Rule.** Out now is solid; forthcoming is a
-keyline. The spine, the sleeve, and the discography swatch all speak this one
+keyline. The spine, the sleeve, and the wall's frame all speak this one
 language, so status reads before any text does.
 
 **Color strategy: a quiet board, loud sleeves.** Cool graphite ground and
@@ -136,11 +136,11 @@ actions (the liner-notes link) and chrome off product routes.
 
 **The lineInk Rule.** `lineInk()` (`lib/theme/sl_theme.dart`) is mandatory
 wherever an accent becomes type or a line on the graphite ground: the notes'
-Open action, the discography's hover name and OUT NOW state, the chrome.
+Open action, the wall's plaque status, the chrome.
 WealthSync's slate and Diamo's plum sit at luminance .11 and .07 and fail
 4.5:1 as type on the ground; `lineInk()` lifts any accent below .20 until it
 clears. The raw accent is used only as a flood (sleeve, spine, the 14px
-discography swatch), where it is the release's own surface, not type.
+plaque swatch), where it is the release's own surface, not type.
 
 **The Legible Sleeve Rule.** Ink printed on a flooded sleeve or a filled
 button is whichever of ground `#0B0D10` or `#F7F7F5` clears 4.5:1 against
@@ -153,10 +153,10 @@ Choose by contrast, not by a luminance guess.
   name and heading on the hub. Line height 1.0 by default.
   - Masthead `SUPREMO LABS`, w800, height .86, fitted edge to edge across the
     measure with `FittedBox`, so it always fills the 1120 column exactly.
-  - Section headings (`Discography`, `Liner notes`) 64px, 44px narrow.
+  - Section headings (`The Wall`, `Liner notes`) 64px, 44px narrow.
   - The label statement under the masthead 34px, 26px narrow.
   - Pulled-release name in the notes 52px, 40px narrow.
-  - Discography names 30px, 24px narrow.
+  - Plaque names 20px.
   - On objects, sizes scale with the object: spine names at 52% of the spine
     width (16 to 26px, w700, +0.6 tracking, uppercase); sleeve names at 13% of
     the sleeve (w800, height .9, uppercase); the FORTHCOMING stamp at 10%
@@ -182,7 +182,7 @@ their own weight and never get a kicker above them.
 The first viewport is the masthead, one line counting out-now against
 forthcoming from data, then the crate with its pulled sleeve and notes.
 
-- **Shelf geometry is solved from the measure.** Eleven items on a bottom
+- **Shelf geometry is solved from the measure.** Thirteen items on a bottom
   edge, 2px apart. On wide layouts a spine is `(width - 480) / 10 - 2`,
   clamped 30 to 56px, and the pulled sleeve takes the remaining width,
   clamped between 300px and 46% of the viewport height (itself clamped 300 to
@@ -209,8 +209,8 @@ forthcoming from data, then the crate with its pulled sleeve and notes.
   action's place. Stacked on narrow layouts.
 - **Accessibility.** Every shelf item is a `Semantics` button: a spine reads
   "Show SL 00n, Name", the pulled sleeve reads "Open Name" or "Name,
-  forthcoming". The discography below repeats every release as a focusable
-  row, so the crate is never the only route to a product.
+  forthcoming". The wall below repeats every release as a focusable
+  painting, so the crate is never the only route to a product.
 
 ## Motion: one dig, one reveal, one sweep
 
@@ -228,10 +228,10 @@ scroll.
 - **Notes swap (280ms `AnimatedSwitcher`):** the notes cross-fade to the new
   release.
 - **Hover states (180ms `Curves.easeOut`):** the Open action fills, a
-  discography row warms, its arrow slides.
+  plaque lifts with its painting.
 - **Entrance (`FadeSlideIn`, 620ms, easeOutCubic):** fires on visibility,
   via the Scaffold's `ScrollNotificationObserver`, when the widget's top
-  crosses 88% of the viewport; masthead, discography heading, and liner notes.
+  crosses 88% of the viewport; masthead, wall heading, and liner notes.
 - **Travel (`_LineSweep`, `lib/app/router.dart`):** the destination's own
   color wipes across the viewport and off the far side, revealing the arriving
   page. 620ms out, 520ms back.
@@ -275,18 +275,23 @@ but not visibly listed anywhere on the page itself.
 ## Composition
 
 - One measure: every section sits in `SLPage`, 1120px max, 24px gutters, and
-  a hairline `SLRule` divides crate, discography, and liner notes.
-- Generous section spacing: discography 80px above / 88px below (56 narrow),
+  a hairline `SLRule` divides crate, the wall, and liner notes.
+- Generous section spacing: the wall 80px above / 88px below (56 narrow),
   liner notes 88 / 96 (56 / 64 narrow).
 - **No product card grid, and no bento of screenshots.** The catalog appears
-  twice and only twice: as a crate, then as a discography.
-- **Discography is the catalog as a label lists it.** One list, in catalog
-  order, not grouped: catalog number (96px column), 14px square swatch (solid
-  accent when out, 1.4px muted keyline when forthcoming), name over tagline,
-  genre (150px column), status (OUT NOW with an arrow in `lineInk`, or
-  FORTHCOMING). Rows are ruled by 1px dividers under a hairline; hovering a
-  shipped row warms it to 8% of its `lineInk` color and turns the name that
-  color. Forthcoming rows are quieter at every level and are not hover targets.
+  twice and only twice: as a crate, then as a wall.
+- **The Wall is the catalog as a gallery hangs it** (`lib/home/wall.dart`).
+  It replaces the discography. Every release is a pixel-art painting in a
+  brass frame (cream mat, 2px stepped bevel) with a brass plaque under it:
+  catalog number in Silkscreen, name in Big Shoulders, OUT NOW or FORTHCOMING.
+  Paintings are drawn on a 36-48px grid in the release's own palette and
+  scaled with no smoothing. A salon hang: 4 columns wide, 3 mid, 2 narrow,
+  each painting placed in the shortest column, odd columns dropped 40px.
+  Shipped paintings are the only hover targets (lift 4px, 280ms); a
+  forthcoming release is a dashed hairline empty frame with a keyline plaque.
+  Silkscreen is the one font beyond the type system, plaque numbers only.
+  Paintings are art, not app screens: the Real Screen or Type Rule governs
+  sleeves, not the wall.
 - **Forthcoming releases keep their catalog place.** The catalog is only true
   if it is complete, but nothing forthcoming is dressed as something you can
   open.
